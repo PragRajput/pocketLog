@@ -8,6 +8,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { createTag } from "@/lib/actions";
+import { toast } from "@/lib/toast";
 import { Plus } from "lucide-react";
 import { FUND_COLORS } from "@/lib/utils";
 
@@ -31,6 +32,7 @@ export function TagForm() {
     startTransition(async () => {
       try {
         await createTag({ name: name.trim(), color });
+        toast({ title: "Tag created", description: name.trim(), variant: "success" });
         setName("");
         setColor(TAG_COLORS[0]);
         setOpen(false);

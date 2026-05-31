@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteTag } from "@/lib/actions";
+import { toast } from "@/lib/toast";
 import { Trash2 } from "lucide-react";
 
 export function DeleteTagButton({ id }: { id: string }) {
@@ -14,6 +15,7 @@ export function DeleteTagButton({ id }: { id: string }) {
     startTransition(async () => {
       await deleteTag(id);
       setOpen(false);
+      toast({ title: "Tag deleted", variant: "info" });
     });
   }
 

@@ -56,7 +56,7 @@ export default async function TagsPage() {
                   </div>
 
                   {/* Stats */}
-                  <div className="flex items-center gap-6 text-sm">
+                  <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-sm">
                     <div>
                       <p className="text-xs text-gray-400">Total paid</p>
                       <p className="font-bold text-gray-900 text-base">{formatCurrency(t.total)}</p>
@@ -82,7 +82,7 @@ export default async function TagsPage() {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Link
                     href={`/expenses?tagId=${t.id}`}
-                    className="text-xs text-sky-600 hover:text-sky-700 flex items-center gap-1 font-medium opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="text-xs text-sky-600 hover:text-sky-700 flex items-center gap-1 font-medium opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     View payments
                     <ArrowRight size={12} />

@@ -101,7 +101,7 @@ export default async function ReportsPage({ searchParams }: Props) {
       </div>
 
       {/* Summary stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
         <Card>
           <CardContent className="p-5">
             <p className="text-xs text-gray-500 mb-1">Total Spent</p>
@@ -135,7 +135,7 @@ export default async function ReportsPage({ searchParams }: Props) {
       </Card>
 
       {/* Fund + Category breakdown */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">By Fund</CardTitle>

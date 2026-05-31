@@ -12,6 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { createExpense, updateExpense, createTag } from "@/lib/actions";
+import { toast } from "@/lib/toast";
 import { Plus, Pencil, Tag, X } from "lucide-react";
 import { format } from "date-fns";
 
@@ -79,8 +80,10 @@ export function ExpenseForm({ funds, categories, tags: initialTags, expense, def
       };
       if (expense) {
         await updateExpense(expense.id, data);
+        toast({ title: "Expense updated", variant: "success" });
       } else {
         await createExpense(data);
+        toast({ title: "Expense added", description: `₹${data.amount.toLocaleString("en-IN")} recorded`, variant: "success" });
         setAmount("");
         setDescription("");
         setNote("");

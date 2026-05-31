@@ -46,8 +46,7 @@ export function ExpenseFilters({ funds, categories, tags }: Props) {
           defaultValue={searchParams.get("search") ?? ""}
           onChange={(e) => {
             const v = e.target.value;
-            const t = setTimeout(() => update("search", v || null), 350);
-            return () => clearTimeout(t);
+            setTimeout(() => update("search", v || null), 350);
           }}
         />
       </div>

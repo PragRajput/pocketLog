@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteExpense } from "@/lib/actions";
+import { toast } from "@/lib/toast";
 import { Trash2 } from "lucide-react";
 
 export function DeleteExpenseButton({ id }: { id: string }) {
@@ -14,6 +15,7 @@ export function DeleteExpenseButton({ id }: { id: string }) {
     startTransition(async () => {
       await deleteExpense(id);
       setOpen(false);
+      toast({ title: "Expense deleted", variant: "info" });
     });
   }
 

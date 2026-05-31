@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteFund } from "@/lib/actions";
+import { toast } from "@/lib/toast";
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -16,6 +17,7 @@ export function DeleteFundButton({ id }: { id: string }) {
     startTransition(async () => {
       await deleteFund(id);
       setOpen(false);
+      toast({ title: "Fund deleted", variant: "info" });
       router.push("/funds");
     });
   }

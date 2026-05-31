@@ -44,7 +44,7 @@ export default async function FundsPage() {
               <p className="text-sm font-semibold text-indigo-700">Total Monthly Budget — {monthName}</p>
               <p className="text-xs text-indigo-500">Resets on the 1st of each month</p>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
               <div>
                 <p className="text-xs text-gray-500 mb-0.5">Budget</p>
                 <p className="text-xl font-bold text-gray-900">{formatCurrency(totalBudget)}</p>
@@ -88,7 +88,7 @@ export default async function FundsPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {fundsWithStats.map((f) => {
           const hasBudget = f.budget != null;
           const isOver = hasBudget && f.remaining! < 0;

@@ -9,6 +9,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { createFund, updateFund } from "@/lib/actions";
+import { toast } from "@/lib/toast";
 import { Plus, Pencil } from "lucide-react";
 import { FUND_COLORS } from "@/lib/utils";
 
@@ -45,8 +46,10 @@ export function FundForm({ fund, trigger }: FundFormProps) {
       };
       if (fund) {
         await updateFund(fund.id, data);
+        toast({ title: "Fund updated", variant: "success" });
       } else {
         await createFund(data);
+        toast({ title: "Fund created", description: name, variant: "success" });
         setName("");
         setDescription("");
         setBudget("");

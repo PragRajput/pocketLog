@@ -66,7 +66,7 @@ export default async function DashboardPage() {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {statsCards.map((s) => (
           <Card key={s.title}>
             <CardContent className="p-5">
@@ -86,8 +86,8 @@ export default async function DashboardPage() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <Card className="col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-sm">Monthly Spending Trend</CardTitle>
           </CardHeader>
@@ -107,8 +107,8 @@ export default async function DashboardPage() {
       </div>
 
       {/* Fund quick stats + Recent transactions */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="col-span-1">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-1">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm">Funds Overview</CardTitle>
@@ -157,7 +157,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-2">
+        <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm">Recent Transactions</CardTitle>
