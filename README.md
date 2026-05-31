@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pocketlog
+
+A personal expense tracker to log, categorize, and analyze your spending — built with Next.js, Prisma, and Neon PostgreSQL.
+
+## Features
+
+- **Expenses** — Log expenses with amount, description, date, and notes
+- **Funds** — Organize spending across multiple wallets or funds with optional budgets
+- **Categories** — Categorize expenses with custom colors and icons
+- **Tags** — Label expenses with flexible tags
+- **Reports** — Visualize spending patterns with charts
+
+## Tech Stack
+
+- **Framework** — [Next.js 16](https://nextjs.org) (App Router)
+- **Database** — [Neon](https://neon.tech) (serverless PostgreSQL)
+- **ORM** — [Prisma 7](https://www.prisma.io)
+- **UI** — [Tailwind CSS v4](https://tailwindcss.com) + [Radix UI](https://www.radix-ui.com)
+- **Deployment** — [Vercel](https://vercel.com)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Node.js 20+
+- A [Neon](https://neon.tech) database (free tier works)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Clone the repo and install dependencies:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+   ```bash
+   git clone https://github.com/your-username/pocketlog.git
+   cd pocketlog
+   npm install
+   ```
 
-## Learn More
+2. Copy the environment variables and fill in your Neon connection strings:
 
-To learn more about Next.js, take a look at the following resources:
+   ```bash
+   cp .env.example .env
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   ```env
+   DATABASE_URL="postgresql://..."   # Pooled connection (for app queries)
+   DIRECT_URL="postgresql://..."     # Direct connection (for migrations)
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. Run migrations and start the dev server:
 
-## Deploy on Vercel
+   ```bash
+   npx prisma migrate deploy
+   npm run dev
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   Open [http://localhost:8082](http://localhost:8082).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deployment
+
+This project is configured for Vercel + Neon out of the box.
+
+1. Push to GitHub
+2. Import the repo on [Vercel](https://vercel.com)
+3. Add `DATABASE_URL` and `DIRECT_URL` in Vercel → Settings → Environment Variables
+4. Deploy — Vercel runs `prisma migrate deploy && next build` automatically

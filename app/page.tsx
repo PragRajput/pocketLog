@@ -1,65 +1,212 @@
-import Image from "next/image";
+import { getDashboardStats, getFunds, getCategories, getTags } from "@/lib/actions";
+import { Header } from "@/components/layout/header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { SpendingChart } from "@/components/dashboard/spending-chart";
+import { FundBreakdown } from "@/components/dashboard/fund-breakdown";
+import { ExpenseForm } from "@/components/expenses/expense-form";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { TrendingUp, Wallet, ReceiptText, Target } from "lucide-react";
+import Link from "next/link";
 
-export default function Home() {
+export default async function DashboardPage() {
+  const [stats, funds, categories, tags] = await Promise.all([
+    getDashboardStats(),
+    getFunds(),
+    getCategories(),
+    getTags(),
+  ]);
+
+  const totalBudget = funds.reduce((s, f) => s + (f.budget ?? 0), 0);
+  const budgetUsed = totalBudget > 0
+    ? Math.round((stats.totalThisMonth / totalBudget) * 100)
+    : null;
+
+  const statsCards = [
+    {
+      title: "Spent This Month",
+      value: formatCurrency(stats.totalThisMonth),
+      icon: TrendingUp,
+      color: "text-indigo-600",
+      bg: "bg-indigo-50",
+      sub: budgetUsed != null ? `${budgetUsed}% of budget used` : "No budget set",
+    },
+    {
+      title: "Total Expenses",
+      value: stats.totalExpenses.toLocaleString(),
+      icon: ReceiptText,
+      color: "text-violet-600",
+      bg: "bg-violet-50",
+      sub: "All time",
+    },
+    {
+      title: "Active Funds",
+      value: funds.length.toString(),
+      icon: Wallet,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+      sub: funds.map((f) => f.name).join(", ") || "No funds yet",
+    },
+    {
+      title: "Monthly Budget",
+      value: totalBudget > 0 ? formatCurrency(totalBudget) : "—",
+      icon: Target,
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+      sub: totalBudget > 0 ? `${formatCurrency(totalBudget - stats.totalThisMonth)} remaining` : "No budget set",
+    },
+  ];
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div>
+      <Header
+        title="Dashboard"
+        description={`Overview for ${new Date().toLocaleString("default", { month: "long", year: "numeric" })}`}
+        action={<ExpenseForm funds={funds} categories={categories} tags={tags} />}
+      />
+
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        {statsCards.map((s) => (
+          <Card key={s.title}>
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">{s.title}</p>
+                  <p className="text-2xl font-bold text-gray-900">{s.value}</p>
+                  <p className="text-xs text-gray-400 mt-1 truncate max-w-[140px]">{s.sub}</p>
+                </div>
+                <div className={`${s.bg} p-2.5 rounded-lg`}>
+                  <s.icon className={`${s.color} h-5 w-5`} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <Card className="col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm">Monthly Spending Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SpendingChart data={stats.monthlyTrend} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Spending by Fund</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FundBreakdown funds={stats.funds} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Fund quick stats + Recent transactions */}
+      <div className="grid grid-cols-3 gap-4">
+        <Card className="col-span-1">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm">Funds Overview</CardTitle>
+              <Link href="/funds" className="text-xs text-indigo-600 hover:underline">View all</Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {funds.length === 0 && (
+              <p className="text-sm text-gray-400">No funds yet. Create one!</p>
+            )}
+            {stats.funds.map((f) => {
+              const pct = f.budget ? Math.min(100, Math.round((f.thisMonth / f.budget) * 100)) : null;
+              return (
+                <Link key={f.id} href={`/funds/${f.id}`} className="block group">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: f.color }}
+                      />
+                      <span className="text-sm font-medium text-gray-700 group-hover:text-indigo-600 transition-colors">
+                        {f.name}
+                      </span>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {formatCurrency(f.thisMonth)}
+                    </span>
+                  </div>
+                  {pct != null && (
+                    <div className="ml-4">
+                      <div className="h-1.5 w-full rounded-full bg-gray-100">
+                        <div
+                          className="h-1.5 rounded-full transition-all"
+                          style={{
+                            width: `${pct}%`,
+                            backgroundColor: pct > 90 ? "#ef4444" : pct > 70 ? "#f59e0b" : f.color,
+                          }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-400 mt-0.5">{pct}% of budget</p>
+                    </div>
+                  )}
+                </Link>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-2">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm">Recent Transactions</CardTitle>
+              <Link href="/expenses" className="text-xs text-indigo-600 hover:underline">View all</Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {stats.recentExpenses.length === 0 && (
+              <p className="text-sm text-gray-400">No expenses yet.</p>
+            )}
+            <div className="space-y-2">
+              {stats.recentExpenses.map((e) => (
+                <div key={e.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+                      style={{ backgroundColor: e.fund.color }}
+                    >
+                      {e.fund.name[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800 leading-tight">{e.description}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-xs text-gray-400">{formatDate(e.date)}</span>
+                        <span className="text-gray-200">·</span>
+                        <Badge
+                          variant="secondary"
+                          className="py-0 px-1.5 text-[10px]"
+                          style={{ backgroundColor: e.fund.color + "18", color: e.fund.color }}
+                        >
+                          {e.fund.name}
+                        </Badge>
+                        {e.category && (
+                          <Badge variant="secondary" className="py-0 px-1.5 text-[10px]">
+                            {e.category.name}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-gray-900">
+                    {formatCurrency(e.amount)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
