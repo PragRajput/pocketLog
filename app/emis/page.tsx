@@ -1,18 +1,16 @@
 import { getEMIs } from "@/lib/emi-actions";
-import { getFunds } from "@/lib/actions";
 
 import { Header } from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { EMIForm, EditEMIButton } from "@/components/emis/emi-form";
 import { MarkPaidButton, CloseEMIButton, ReopenEMIButton, DeleteEMIButton } from "@/components/emis/emi-actions-buttons";
 import { formatCurrency, getInstallmentNo, isEMIActiveForMonth } from "@/lib/utils";
-import { CreditCard, CheckCircle2, Clock, IndianRupee } from "lucide-react";
+import { CreditCard, CheckCircle2 } from "lucide-react";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 export default async function EMIsPage() {
-  const [emis, funds] = await Promise.all([getEMIs(), getFunds()]);
+  const emis = await getEMIs();
 
   const now = new Date();
   const curMonth = now.getMonth() + 1;
@@ -30,12 +28,12 @@ export default async function EMIsPage() {
       <Header
         title="EMIs"
         description="Track your monthly installments and loan repayments"
-        action={<EMIForm funds={funds} />}
+        action={<EMIForm />}
       />
 
       {/* Summary */}
       {active.length > 0 && (
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           <Card>
             <CardContent className="p-5">
               <p className="text-xs text-gray-500 mb-1">Active EMIs</p>
@@ -74,7 +72,7 @@ export default async function EMIsPage() {
             <p className="text-sm text-gray-400 mb-4 max-w-xs">
               Add your running EMIs — car loan, home loan, phone, etc. Track payments month by month.
             </p>
-            <EMIForm funds={funds} />
+            <EMIForm />
           </CardContent>
         </Card>
       )}
@@ -104,11 +102,6 @@ export default async function EMIsPage() {
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="font-semibold text-gray-900">{emi.name}</h3>
                         {emi.lender && <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{emi.lender}</span>}
-                        {emi.fund && (
-                          <span className="text-xs px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: emi.fund.color }}>
-                            {emi.fund.name}
-                          </span>
-                        )}
                       </div>
 
                       <div className="flex items-center gap-4 text-sm mb-3 flex-wrap">
@@ -152,8 +145,8 @@ export default async function EMIsPage() {
                           />
                         </div>
                       )}
-                      <div className="flex items-center gap-1">
-                        <EditEMIButton emi={emi} funds={funds} />
+                      <div className="flex items-center gap-0.5 rounded-xl border border-gray-200 bg-gray-50/60 p-0.5">
+                        <EditEMIButton emi={emi} />
                         <CloseEMIButton id={emi.id} />
                         <DeleteEMIButton id={emi.id} />
                       </div>

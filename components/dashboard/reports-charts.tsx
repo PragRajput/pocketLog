@@ -7,8 +7,6 @@ import { formatCurrency } from "@/lib/utils";
 
 interface Props {
   daily: { day: string; amount: number }[];
-  byFund: { name: string; color: string; amount: number }[];
-  byCategory: { name: string; color: string; amount: number }[];
 }
 
 export function ReportsCharts({ daily }: Props) {

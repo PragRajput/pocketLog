@@ -9,7 +9,6 @@ interface Expense {
   description: string;
   date: Date;
   note?: string | null;
-  fund: { name: string } | null;
   category?: { name: string } | null;
 }
 
@@ -21,12 +20,11 @@ interface Props {
 export function ExportButton({ expenses, month }: Props) {
   function handleExport() {
     const rows = [
-      ["Date", "Description", "Amount (₹)", "Fund", "Category", "Note"],
+      ["Date", "Description", "Amount (₹)", "Category", "Note"],
       ...expenses.map((e) => [
         format(new Date(e.date), "dd/MM/yyyy"),
         e.description,
         e.amount.toFixed(2),
-        e.fund?.name ?? "",
         e.category?.name ?? "",
         e.note ?? "",
       ]),

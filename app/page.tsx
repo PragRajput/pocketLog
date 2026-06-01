@@ -1,22 +1,20 @@
 export const dynamic = 'force-dynamic';
 
-import { getDashboardStats, getFunds, getCategories, getTags } from "@/lib/actions";
+import { getDashboardStats, getCategories, getTags } from "@/lib/actions";
 import { getActiveEMIs } from "@/lib/emi-actions";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SpendingChart } from "@/components/dashboard/spending-chart";
-import { FundBreakdown } from "@/components/dashboard/fund-breakdown";
 import { ExpenseForm } from "@/components/expenses/expense-form";
 import { MarkPaidButton } from "@/components/emis/emi-actions-buttons";
 import { formatCurrency, formatDate, getInstallmentNo, isEMIActiveForMonth } from "@/lib/utils";
-import { TrendingUp, Wallet, ReceiptText, Target, CreditCard, CheckCircle2, AlertCircle } from "lucide-react";
+import { TrendingUp, ReceiptText, Coins, PieChart, CreditCard, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
 export default async function DashboardPage() {
-  const [stats, funds, categories, tags, activeEMIs] = await Promise.all([
+  const [stats, categories, tags, activeEMIs] = await Promise.all([
     getDashboardStats(),
-    getFunds(),
     getCategories(),
     getTags(),
     getActiveEMIs(),
@@ -28,12 +26,9 @@ export default async function DashboardPage() {
 
   const dueEMIs = activeEMIs.filter(e => isEMIActiveForMonth(e, curMonth, curYear));
   const unpaidEMIs = dueEMIs.filter(e => !e.payments.some(p => p.month === curMonth && p.year === curYear));
-  const paidEMIs = dueEMIs.filter(e => e.payments.some(p => p.month === curMonth && p.year === curYear));
 
-  const totalBudget = funds.reduce((s, f) => s + (f.budget ?? 0), 0);
-  const budgetUsed = totalBudget > 0
-    ? Math.round((stats.totalThisMonth / totalBudget) * 100)
-    : null;
+  const topCategory = stats.topCategories[0];
+  const maxCategoryTotal = Math.max(...stats.topCategories.map(c => c.total), 1);
 
   const statsCards = [
     {
@@ -42,7 +37,7 @@ export default async function DashboardPage() {
       icon: TrendingUp,
       color: "text-indigo-600",
       bg: "bg-indigo-50",
-      sub: budgetUsed != null ? `${budgetUsed}% of budget used` : "No budget set",
+      sub: now.toLocaleString("default", { month: "long" }),
     },
     {
       title: "Total Expenses",
@@ -53,20 +48,20 @@ export default async function DashboardPage() {
       sub: "All time",
     },
     {
-      title: "Active Funds",
-      value: funds.length.toString(),
-      icon: Wallet,
+      title: "Avg Expense",
+      value: formatCurrency(stats.avgExpense),
+      icon: Coins,
       color: "text-emerald-600",
       bg: "bg-emerald-50",
-      sub: funds.map((f) => f.name).join(", ") || "No funds yet",
+      sub: "Per transaction",
     },
     {
-      title: "Monthly Budget",
-      value: totalBudget > 0 ? formatCurrency(totalBudget) : "—",
-      icon: Target,
+      title: "Top Category",
+      value: topCategory ? topCategory.name : "—",
+      icon: PieChart,
       color: "text-amber-600",
       bg: "bg-amber-50",
-      sub: totalBudget > 0 ? `${formatCurrency(totalBudget - stats.totalThisMonth)} remaining` : "No budget set",
+      sub: topCategory ? `${formatCurrency(topCategory.total)} this month` : "No spending yet",
     },
   ];
 
@@ -75,7 +70,7 @@ export default async function DashboardPage() {
       <Header
         title="Dashboard"
         description={`Overview for ${new Date().toLocaleString("default", { month: "long", year: "numeric" })}`}
-        action={<ExpenseForm funds={funds} categories={categories} tags={tags} />}
+        action={<ExpenseForm categories={categories} tags={tags} />}
       />
 
       {/* Stats */}
@@ -86,7 +81,7 @@ export default async function DashboardPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-gray-500 mb-1">{s.title}</p>
-                  <p className="text-2xl font-bold text-gray-900">{s.value}</p>
+                  <p className="text-2xl font-bold text-gray-900 truncate max-w-[140px]">{s.value}</p>
                   <p className="text-xs text-gray-400 mt-1 truncate max-w-[140px]">{s.sub}</p>
                 </div>
                 <div className={`${s.bg} p-2.5 rounded-lg`}>
@@ -111,119 +106,91 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Spending by Fund</CardTitle>
+            <CardTitle className="text-sm">Top Categories — This Month</CardTitle>
           </CardHeader>
           <CardContent>
-            <FundBreakdown funds={stats.funds} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Fund quick stats + Recent transactions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm">Funds Overview</CardTitle>
-              <Link href="/funds" className="text-xs text-indigo-600 hover:underline">View all</Link>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {funds.length === 0 && (
-              <p className="text-sm text-gray-400">No funds yet. Create one!</p>
-            )}
-            {stats.funds.map((f) => {
-              const pct = f.budget ? Math.min(100, Math.round((f.thisMonth / f.budget) * 100)) : null;
-              return (
-                <Link key={f.id} href={`/funds/${f.id}`} className="block group">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: f.color }}
-                      />
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-indigo-600 transition-colors">
-                        {f.name}
-                      </span>
-                    </div>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {formatCurrency(f.thisMonth)}
-                    </span>
-                  </div>
-                  {pct != null && (
-                    <div className="ml-4">
+            {stats.topCategories.length === 0 ? (
+              <p className="text-sm text-gray-400 py-4 text-center">No spending this month.</p>
+            ) : (
+              <div className="space-y-3">
+                {stats.topCategories.map((c) => {
+                  const pct = Math.round((c.total / maxCategoryTotal) * 100);
+                  return (
+                    <div key={c.name}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.color }} />
+                          <span className="text-sm font-medium text-gray-700 truncate">{c.name}</span>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900 flex-shrink-0 ml-2">
+                          {formatCurrency(c.total)}
+                        </span>
+                      </div>
                       <div className="h-1.5 w-full rounded-full bg-gray-100">
                         <div
                           className="h-1.5 rounded-full transition-all"
-                          style={{
-                            width: `${pct}%`,
-                            backgroundColor: pct > 90 ? "#ef4444" : pct > 70 ? "#f59e0b" : f.color,
-                          }}
+                          style={{ width: `${pct}%`, backgroundColor: c.color }}
                         />
                       </div>
-                      <p className="text-xs text-gray-400 mt-0.5">{pct}% of budget</p>
                     </div>
-                  )}
-                </Link>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm">Recent Transactions</CardTitle>
-              <Link href="/expenses" className="text-xs text-indigo-600 hover:underline">View all</Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {stats.recentExpenses.length === 0 && (
-              <p className="text-sm text-gray-400">No expenses yet.</p>
+                  );
+                })}
+              </div>
             )}
-            <div className="space-y-2">
-              {stats.recentExpenses.map((e) => (
-                <div key={e.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-                      style={{ backgroundColor: e.fund?.color ?? "#94a3b8" }}
-                    >
-                      {e.fund ? e.fund.name[0].toUpperCase() : "?"}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800 leading-tight">{e.description}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-xs text-gray-400">{formatDate(e.date)}</span>
-                        {e.fund && (
-                          <>
-                            <span className="text-gray-200">·</span>
-                            <Badge
-                              variant="secondary"
-                              className="py-0 px-1.5 text-[10px]"
-                              style={{ backgroundColor: e.fund.color + "18", color: e.fund.color }}
-                            >
-                              {e.fund.name}
-                            </Badge>
-                          </>
-                        )}
-                        {e.category && (
-                          <Badge variant="secondary" className="py-0 px-1.5 text-[10px]">
-                            {e.category.name}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-sm font-bold text-gray-900">
-                    {formatCurrency(e.amount)}
-                  </span>
-                </div>
-              ))}
-            </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Recent transactions */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm">Recent Transactions</CardTitle>
+            <Link href="/expenses" className="text-xs text-indigo-600 hover:underline">View all</Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {stats.recentExpenses.length === 0 && (
+            <p className="text-sm text-gray-400">No expenses yet.</p>
+          )}
+          <div className="space-y-2">
+            {stats.recentExpenses.map((e) => (
+              <div key={e.id} className="flex items-start sm:items-center justify-between py-2.5 border-b border-gray-50 last:border-0 gap-3">
+                <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                  <div
+                    className="h-8 w-8 rounded-lg flex-shrink-0 flex items-center justify-center text-white text-xs font-bold mt-0.5 sm:mt-0"
+                    style={{ backgroundColor: e.category?.color ?? "#94a3b8" }}
+                  >
+                    {e.description[0]?.toUpperCase() ?? "?"}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 leading-tight truncate">{e.description}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      <span className="text-xs text-gray-400">{formatDate(e.date)}</span>
+                      {e.category && (
+                        <Badge variant="secondary" className="py-0 px-1.5 text-[10px]">
+                          {e.category.name}
+                        </Badge>
+                      )}
+                      {e.tag && (
+                        <span
+                          className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white"
+                          style={{ backgroundColor: e.tag.color }}
+                        >
+                          #{e.tag.name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <span className="text-sm font-bold text-gray-900 flex-shrink-0">
+                  {formatCurrency(e.amount)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* EMI widget — only shown if EMIs are due this month */}
       {dueEMIs.length > 0 && (

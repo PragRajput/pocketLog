@@ -3,10 +3,10 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Dialog, DialogContent,
+  Dialog, DialogContent, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  LayoutDashboard, Receipt, Wallet, BarChart3, Tag,
+  LayoutDashboard, Receipt, CreditCard, BarChart3, Tag,
   Search, ArrowRight, Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 const PAGES = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard, keywords: ["home", "overview"] },
   { label: "Expenses", href: "/expenses", icon: Receipt, keywords: ["transactions", "list"] },
-  { label: "Funds", href: "/funds", icon: Wallet, keywords: ["budget", "envelope"] },
+  { label: "EMIs", href: "/emis", icon: CreditCard, keywords: ["loan", "installment"] },
   { label: "Tags", href: "/tags", icon: Tag, keywords: ["labels", "group"] },
   { label: "Reports", href: "/reports", icon: BarChart3, keywords: ["analytics", "chart"] },
 ];
@@ -100,6 +100,10 @@ export function CommandPalette() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="p-0 gap-0 max-w-lg overflow-hidden">
+          <DialogTitle className="sr-only">Command palette</DialogTitle>
+          <DialogDescription className="sr-only">
+            Search pages and expenses, or jump to an action.
+          </DialogDescription>
           {/* Search input */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
             <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger,
 } from "@/components/ui/dialog";
 import { createTag } from "@/lib/actions";
 import { toast } from "@/lib/toast";
@@ -53,6 +53,9 @@ export function TagForm() {
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Create New Tag</DialogTitle>
+          <DialogDescription className="sr-only">
+            Name your tag and pick a color to group related expenses.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="space-y-1.5">
@@ -67,7 +70,7 @@ export function TagForm() {
             />
             {error && <p className="text-xs text-red-500">{error}</p>}
             <p className="text-xs text-gray-400">
-              Use this to group multiple payments for the same item across any date or fund.
+              Use this to group multiple payments for the same item across any date or category.
             </p>
           </div>
 

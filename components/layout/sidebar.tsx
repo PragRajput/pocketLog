@@ -1,35 +1,45 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Receipt,
-  Wallet,
-  BarChart3,
-  IndianRupee,
-  Tag,
-  CreditCard,
-  Settings,
+  LayoutDashboard, Receipt, BarChart3,
+  IndianRupee, Tag, CreditCard, Settings, Menu, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { UserMenu } from "./user-menu";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/expenses", label: "Expenses", icon: Receipt },
-  { href: "/funds", label: "Funds", icon: Wallet },
   { href: "/emis", label: "EMIs", icon: CreditCard },
   { href: "/tags", label: "Tags", icon: Tag },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar() {
+// Bottom tab bar shows only the primary routes
+const tabItems = navItems.filter((n) =>
+  ["/", "/expenses", "/emis", "/tags", "/reports"].includes(n.href)
+);
+
+interface SidebarProps {
+  user?: { name?: string | null; email?: string | null };
+}
+
+export function Sidebar({ user }: SidebarProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => { setDrawerOpen(false); }, [pathname]);
+
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
     <>
-      {/* Desktop sidebar */}
+      {/* ── Desktop sidebar ─────────────────────────────── */}
       <aside className="hidden md:flex fixed left-0 top-0 h-full w-60 bg-white border-r border-gray-100 flex-col z-30">
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-5 py-5 border-b border-gray-100">
@@ -42,59 +52,144 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
+        {/* Nav */}
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {navItems.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+            const active = isActive(href);
             return (
               <Link
                 key={href}
                 href={href}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all group",
                   active
                     ? "bg-indigo-50 text-indigo-700"
                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 )}
               >
-                <Icon className={cn("h-4.5 w-4.5", active ? "text-indigo-600" : "text-gray-400")} size={18} />
+                <span
+                  className={cn(
+                    "absolute left-0 h-6 w-1 rounded-r-full bg-indigo-600 transition-all",
+                    active ? "opacity-100" : "opacity-0"
+                  )}
+                  aria-hidden
+                />
+                <Icon
+                  className={cn(
+                    "flex-shrink-0",
+                    active ? "text-indigo-600" : "text-gray-400 group-hover:text-gray-600"
+                  )}
+                  size={18}
+                />
                 {label}
               </Link>
             );
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="px-5 py-4 border-t border-gray-100">
-          <p className="text-xs text-gray-400">Track every rupee.</p>
+        {/* User + Footer */}
+        <div className="px-3 py-3 border-t border-gray-100">
+          {user && <UserMenu name={user.name} email={user.email} />}
         </div>
       </aside>
 
-      {/* Mobile top bar */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-100 flex items-center px-4 z-30">
+      {/* ── Mobile top bar ──────────────────────────────── */}
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 z-30">
+        <button
+          onClick={() => setDrawerOpen(true)}
+          className="p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+          aria-label="Open menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600">
             <IndianRupee className="h-4 w-4 text-white" />
           </div>
-          <p className="font-bold text-gray-900 text-sm">Pocketlog</p>
+          <span className="font-bold text-gray-900 text-sm">Pocketlog</span>
         </div>
+
+        {/* Spacer to center logo */}
+        <div className="w-9" />
       </header>
 
-      {/* Mobile bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30 flex">
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+      {/* ── Mobile drawer ───────────────────────────────── */}
+      {drawerOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setDrawerOpen(false)}
+          />
+          <aside className="relative z-50 w-72 h-full bg-white flex flex-col shadow-2xl">
+            {/* Drawer header */}
+            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600">
+                  <IndianRupee className="h-4.5 w-4.5 text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900 text-sm leading-tight">Pocketlog</p>
+                  <p className="text-xs text-gray-400">Personal Finance</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Drawer nav */}
+            <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+              {navItems.map(({ href, label, icon: Icon }) => {
+                const active = isActive(href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all",
+                      active
+                        ? "bg-indigo-50 text-indigo-700"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    )}
+                  >
+                    <Icon
+                      className={cn(active ? "text-indigo-600" : "text-gray-400")}
+                      size={20}
+                    />
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="px-5 py-4 border-t border-gray-100">
+              <p className="text-xs text-gray-400">Track every rupee.</p>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* ── Mobile bottom tab bar (5 primary routes) ────── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30 flex safe-area-inset-bottom">
+        {tabItems.map(({ href, label, icon: Icon }) => {
+          const active = isActive(href);
           return (
             <Link
               key={href}
               href={href}
               className={cn(
-                "flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors",
+                "flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-colors min-w-0",
                 active ? "text-indigo-600" : "text-gray-400"
               )}
             >
-              <Icon size={20} />
-              <span className="text-[10px] font-medium">{label}</span>
+              <Icon size={22} strokeWidth={active ? 2.2 : 1.8} />
+              <span className={cn("text-[10px] font-medium truncate", active ? "font-semibold" : "")}>
+                {label}
+              </span>
             </Link>
           );
         })}

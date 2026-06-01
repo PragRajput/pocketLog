@@ -9,31 +9,45 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger,
 } from "@/components/ui/dialog";
 import { createExpense, updateExpense, createTag } from "@/lib/actions";
 import { toast } from "@/lib/toast";
 import { Plus, Pencil, Tag, X } from "lucide-react";
 import { format } from "date-fns";
 
-interface Fund { id: string; name: string; color: string }
 interface Category { id: string; name: string; color: string }
 interface TagType { id: string; name: string; color: string }
 interface Expense {
   id: string; amount: number; description: string; date: Date;
-  fundId: string | null; categoryId: string | null; tagId: string | null; note: string | null;
+  categoryId: string | null; tagId: string | null; note: string | null;
+  paymentMethod: string | null;
+}
+
+const PAYMENT_TYPES = ["UPI", "Credit Card", "Debit Card", "Cash"];
+const BANKS = ["HDFC", "Kotak", "Axis", "ICICI", "SBI", "Canara", "IDFC"];
+// Cash is the only type that doesn't need a bank.
+const needsBank = (type: string) => type !== "" && type !== "Cash";
+
+// paymentMethod is stored as a single string: "Type · Bank" (or just "Type" for Cash).
+function parsePaymentMethod(value: string | null | undefined): { type: string; bank: string } {
+  if (!value) return { type: "", bank: "" };
+  const [type, bank] = value.split(" · ");
+  return { type: type ?? "", bank: bank ?? "" };
+}
+function buildPaymentMethod(type: string, bank: string): string {
+  if (!type) return "";
+  return needsBank(type) && bank ? `${type} · ${bank}` : type;
 }
 
 interface ExpenseFormProps {
-  funds: Fund[];
   categories: Category[];
   tags: TagType[];
   expense?: Expense;
-  defaultFundId?: string;
   trigger?: React.ReactNode;
 }
 
-export function ExpenseForm({ funds, categories, tags: initialTags, expense, defaultFundId, trigger }: ExpenseFormProps) {
+export function ExpenseForm({ categories, tags: initialTags, expense, trigger }: ExpenseFormProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -42,10 +56,12 @@ export function ExpenseForm({ funds, categories, tags: initialTags, expense, def
   const [date, setDate] = useState(
     expense ? format(new Date(expense.date), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")
   );
-  const [fundId, setFundId] = useState(expense?.fundId ?? defaultFundId ?? "");
   const [categoryId, setCategoryId] = useState(expense?.categoryId ?? "");
   const [tagId, setTagId] = useState(expense?.tagId ?? "");
   const [note, setNote] = useState(expense?.note ?? "");
+  const initialPayment = parsePaymentMethod(expense?.paymentMethod);
+  const [paymentType, setPaymentType] = useState(initialPayment.type);
+  const [bank, setBank] = useState(initialPayment.bank);
 
   // inline tag creation
   const [tags, setTags] = useState<TagType[]>(initialTags);
@@ -73,10 +89,10 @@ export function ExpenseForm({ funds, categories, tags: initialTags, expense, def
         amount: parseFloat(amount),
         description,
         date: new Date(date),
-        fundId: fundId && fundId !== "none" ? fundId : undefined,
         categoryId: categoryId && categoryId !== "none" ? categoryId : undefined,
         tagId: tagId && tagId !== "none" ? tagId : undefined,
         note: note || undefined,
+        paymentMethod: buildPaymentMethod(paymentType, bank) || undefined,
       };
       if (expense) {
         await updateExpense(expense.id, data);
@@ -87,9 +103,10 @@ export function ExpenseForm({ funds, categories, tags: initialTags, expense, def
         setAmount("");
         setDescription("");
         setNote("");
-        setFundId("");
         setTagId("");
         setCategoryId("");
+        setPaymentType("");
+        setBank("");
         setDate(format(new Date(), "yyyy-MM-dd"));
       }
       setOpen(false);
@@ -111,6 +128,9 @@ export function ExpenseForm({ funds, categories, tags: initialTags, expense, def
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{expense ? "Edit Expense" : "Add New Expense"}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Enter the amount, date, and details for this expense.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="grid grid-cols-2 gap-3">
@@ -152,26 +172,6 @@ export function ExpenseForm({ funds, categories, tags: initialTags, expense, def
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Fund</Label>
-              <Select value={fundId || undefined} onValueChange={setFundId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Optional" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No fund</SelectItem>
-                  {funds.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>
-                      <span className="flex items-center gap-2">
-                        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: f.color }} />
-                        {f.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
               <Label>Category</Label>
               <Select value={categoryId} onValueChange={setCategoryId}>
                 <SelectTrigger>
@@ -185,7 +185,47 @@ export function ExpenseForm({ funds, categories, tags: initialTags, expense, def
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-1.5">
+              <Label>Payment Type</Label>
+              <Select
+                value={paymentType || undefined}
+                onValueChange={(v) => {
+                  const type = v === "none" ? "" : v;
+                  setPaymentType(type);
+                  if (!needsBank(type)) setBank("");
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Optional" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {PAYMENT_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          {/* Bank — only needed when not paying by cash */}
+          {needsBank(paymentType) && (
+            <div className="space-y-1.5">
+              <Label>Bank</Label>
+              <Select value={bank || undefined} onValueChange={(v) => setBank(v === "none" ? "" : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select bank" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {BANKS.map((b) => (
+                    <SelectItem key={b} value={b}>{b}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Tag picker */}
           <div className="space-y-1.5">
@@ -290,13 +330,12 @@ export function ExpenseForm({ funds, categories, tags: initialTags, expense, def
   );
 }
 
-export function EditExpenseButton({ expense, funds, categories, tags }: {
-  expense: Expense; funds: Fund[]; categories: Category[]; tags: TagType[];
+export function EditExpenseButton({ expense, categories, tags }: {
+  expense: Expense; categories: Category[]; tags: TagType[];
 }) {
   return (
     <ExpenseForm
       expense={expense}
-      funds={funds}
       categories={categories}
       tags={tags}
       trigger={

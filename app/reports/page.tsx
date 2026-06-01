@@ -1,4 +1,4 @@
-import { getExpenses, getFunds, getCategories } from "@/lib/actions";
+import { getExpenses } from "@/lib/actions";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,25 +19,9 @@ export default async function ReportsPage({ searchParams }: Props) {
   const from = new Date(year, month - 1, 1);
   const to = new Date(year, month, 0, 23, 59, 59);
 
-  const [expenses, funds, categories] = await Promise.all([
-    getExpenses({ from, to }),
-    getFunds(),
-    getCategories(),
-  ]);
+  const expenses = await getExpenses({ from, to });
 
   const total = expenses.reduce((s, e) => s + e.amount, 0);
-
-  // By fund
-  const byFund = funds.map((f) => {
-    const fExpenses = expenses.filter((e) => e.fundId === f.id);
-    return {
-      id: f.id,
-      name: f.name,
-      color: f.color,
-      amount: fExpenses.reduce((s, e) => s + e.amount, 0),
-      count: fExpenses.length,
-    };
-  }).filter((f) => f.amount > 0).sort((a, b) => b.amount - a.amount);
 
   // By category
   const byCat: Record<string, { name: string; color: string; amount: number; count: number }> = {};
@@ -82,42 +66,44 @@ export default async function ReportsPage({ searchParams }: Props) {
       />
 
       {/* Month navigation */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-4 py-3 mb-6">
         <a
           href={`/reports?month=${prevStr}`}
-          className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors"
+          className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
         >
-          ← Previous
+          ← Prev
         </a>
-        <span className="text-sm font-semibold text-gray-700 px-2">{monthLabel}</span>
-        {!isCurrentMonth && (
+        <span className="text-sm font-semibold text-gray-800">{monthLabel}</span>
+        {!isCurrentMonth ? (
           <a
             href={`/reports?month=${nextStr}`}
-            className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors"
+            className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
           >
             Next →
           </a>
+        ) : (
+          <span className="w-16 text-center text-xs text-gray-300">Current</span>
         )}
       </div>
 
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
         <Card>
-          <CardContent className="p-5">
+          <CardContent className="p-3 sm:p-5">
             <p className="text-xs text-gray-500 mb-1">Total Spent</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(total)}</p>
+            <p className="text-base sm:text-2xl font-bold text-gray-900 truncate">{formatCurrency(total)}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-5">
+          <CardContent className="p-3 sm:p-5">
             <p className="text-xs text-gray-500 mb-1">Transactions</p>
-            <p className="text-2xl font-bold text-gray-900">{expenses.length}</p>
+            <p className="text-base sm:text-2xl font-bold text-gray-900">{expenses.length}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-5">
-            <p className="text-xs text-gray-500 mb-1">Daily Average</p>
-            <p className="text-2xl font-bold text-gray-900">
+          <CardContent className="p-3 sm:p-5">
+            <p className="text-xs text-gray-500 mb-1">Daily Avg</p>
+            <p className="text-base sm:text-2xl font-bold text-gray-900 truncate">
               {formatCurrency(total / daysInMonth)}
             </p>
           </CardContent>
@@ -130,52 +116,12 @@ export default async function ReportsPage({ searchParams }: Props) {
           <CardTitle className="text-sm">Daily Spending — {monthLabel}</CardTitle>
         </CardHeader>
         <CardContent>
-          <ReportsCharts daily={dailyData} byFund={byFund} byCategory={byCategory} />
+          <ReportsCharts daily={dailyData} />
         </CardContent>
       </Card>
 
-      {/* Fund + Category breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">By Fund</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {byFund.length === 0 ? (
-              <p className="text-sm text-gray-400">No data for this month.</p>
-            ) : (
-              <div className="space-y-3">
-                {byFund.map((f) => (
-                  <div key={f.id}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: f.color }} />
-                        <span className="text-sm font-medium text-gray-700">{f.name}</span>
-                        <Badge variant="secondary" className="text-[10px] py-0">{f.count}</Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400">
-                          {total > 0 ? Math.round((f.amount / total) * 100) : 0}%
-                        </span>
-                        <span className="text-sm font-bold text-gray-900">{formatCurrency(f.amount)}</span>
-                      </div>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-gray-100">
-                      <div
-                        className="h-1.5 rounded-full"
-                        style={{
-                          width: total > 0 ? `${(f.amount / total) * 100}%` : "0%",
-                          backgroundColor: f.color,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
+      {/* Category breakdown */}
+      <div className="grid grid-cols-1 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm">By Category</CardTitle>

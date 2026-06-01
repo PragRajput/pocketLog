@@ -6,19 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { createEMI, updateEMI } from "@/lib/emi-actions";
 import { toast } from "@/lib/toast";
 import { Plus, Pencil, ChevronDown, ChevronUp } from "lucide-react";
-
-interface Fund { id: string; name: string; color: string }
 
 interface EMI {
   id: string; name: string; lender: string | null; amount: number;
   tenure: number; startMonth: number; startYear: number;
   processingFee: number | null; gstOnFee: number | null;
   otherCharges: number | null; otherChargesNote: string | null;
-  fundId: string | null; note: string | null;
+  note: string | null;
 }
 
 const MONTHS = [
@@ -29,9 +27,9 @@ const MONTHS = [
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 6 }, (_, i) => currentYear - 3 + i);
 
-interface Props { funds: Fund[]; emi?: EMI; trigger?: React.ReactNode }
+interface Props { emi?: EMI; trigger?: React.ReactNode }
 
-export function EMIForm({ funds, emi, trigger }: Props) {
+export function EMIForm({ emi, trigger }: Props) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [showFees, setShowFees] = useState(!!(emi?.processingFee || emi?.gstOnFee || emi?.otherCharges));
@@ -43,7 +41,6 @@ export function EMIForm({ funds, emi, trigger }: Props) {
   const [tenure, setTenure] = useState(emi?.tenure?.toString() ?? "");
   const [startMonth, setStartMonth] = useState(emi?.startMonth?.toString() ?? String(now.getMonth() + 1));
   const [startYear, setStartYear] = useState(emi?.startYear?.toString() ?? String(now.getFullYear()));
-  const [fundId, setFundId] = useState(emi?.fundId ?? "none");
   const [note, setNote] = useState(emi?.note ?? "");
 
   // Fee fields
@@ -51,6 +48,9 @@ export function EMIForm({ funds, emi, trigger }: Props) {
   const [gstOnFee, setGstOnFee] = useState(emi?.gstOnFee?.toString() ?? "");
   const [otherCharges, setOtherCharges] = useState(emi?.otherCharges?.toString() ?? "");
   const [otherChargesNote, setOtherChargesNote] = useState(emi?.otherChargesNote ?? "");
+
+  // Already-paid months (create mode only)
+  const [alreadyPaid, setAlreadyPaid] = useState("");
 
   const endDate = (() => {
     const m = parseInt(startMonth); const y = parseInt(startYear); const t = parseInt(tenure);
@@ -74,14 +74,13 @@ export function EMIForm({ funds, emi, trigger }: Props) {
         gstOnFee: gstOnFee ? parseFloat(gstOnFee) : undefined,
         otherCharges: otherCharges ? parseFloat(otherCharges) : undefined,
         otherChargesNote: otherChargesNote || undefined,
-        fundId: fundId !== "none" ? fundId : undefined,
         note: note || undefined,
       };
       if (emi) {
         await updateEMI(emi.id, data);
         toast({ title: "EMI updated", variant: "success" });
       } else {
-        await createEMI(data);
+        await createEMI({ ...data, alreadyPaid: alreadyPaid ? parseInt(alreadyPaid) : undefined });
         toast({ title: "EMI added", description: `₹${parseFloat(amount).toLocaleString("en-IN")}/month × ${tenure} months`, variant: "success" });
       }
       setOpen(false);
@@ -96,6 +95,9 @@ export function EMIForm({ funds, emi, trigger }: Props) {
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{emi ? "Edit EMI" : "Add New EMI"}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Enter the loan details, tenure, and any processing fees for this EMI.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
 
@@ -146,6 +148,43 @@ export function EMIForm({ funds, emi, trigger }: Props) {
               </Select>
             </div>
           </div>
+
+          {/* Already-paid months — create mode only */}
+          {!emi && (() => {
+            const sm = parseInt(startMonth); const sy = parseInt(startYear);
+            const paid = parseInt(alreadyPaid) || 0;
+            const maxPaid = parseInt(tenure) || 0;
+            const previewMonths = paid > 0 && sm && sy
+              ? Array.from({ length: Math.min(paid, maxPaid) }, (_, i) => {
+                  const totalMonth = sm - 1 + i;
+                  const m = (totalMonth % 12) + 1;
+                  const y = sy + Math.floor(totalMonth / 12);
+                  return new Date(y, m - 1, 1).toLocaleString("default", { month: "short", year: "numeric" });
+                })
+              : [];
+            return (
+              <div className="space-y-1.5">
+                <Label>Months Already Paid <span className="text-gray-400 font-normal">(optional)</span></Label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  min="0"
+                  max={maxPaid || undefined}
+                  value={alreadyPaid}
+                  onChange={e => setAlreadyPaid(e.target.value)}
+                />
+                {previewMonths.length > 0 && (
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
+                    <p className="text-xs text-emerald-700 font-medium mb-1">Will mark as paid:</p>
+                    <p className="text-xs text-emerald-600">{previewMonths.join(" · ")}</p>
+                  </div>
+                )}
+                {!previewMonths.length && (
+                  <p className="text-xs text-gray-400">If this EMI started earlier, enter how many installments you've already paid.</p>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Processing Fees section */}
           <div className="border border-gray-100 rounded-xl overflow-hidden">
@@ -234,23 +273,6 @@ export function EMIForm({ funds, emi, trigger }: Props) {
           )}
 
           <div className="space-y-1.5">
-            <Label>Deduct from Fund (optional)</Label>
-            <Select value={fundId} onValueChange={setFundId}>
-              <SelectTrigger><SelectValue placeholder="No fund" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No fund</SelectItem>
-                {funds.map(f => (
-                  <SelectItem key={f.id} value={f.id}>
-                    <span className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: f.color }} />{f.name}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
             <Label>Note (optional)</Label>
             <Textarea placeholder="Loan account number, purpose…" value={note} onChange={e => setNote(e.target.value)} rows={2} />
           </div>
@@ -265,11 +287,12 @@ export function EMIForm({ funds, emi, trigger }: Props) {
   );
 }
 
-export function EditEMIButton({ emi, funds }: { emi: EMI; funds: Fund[] }) {
+export function EditEMIButton({ emi }: { emi: EMI }) {
   return (
-    <EMIForm emi={emi} funds={funds} trigger={
-      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-indigo-600">
-        <Pencil size={14} />
+    <EMIForm emi={emi} trigger={
+      <Button variant="ghost" size="icon" title="Edit EMI" aria-label="Edit EMI"
+        className="h-8 w-8 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50">
+        <Pencil size={15} />
       </Button>
     } />
   );

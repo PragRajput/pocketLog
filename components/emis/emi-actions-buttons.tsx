@@ -52,10 +52,10 @@ export function CloseEMIButton({ id }: { id: string }) {
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}
-        className="text-orange-600 border-orange-200 hover:bg-orange-50 gap-1.5">
-        <XCircle size={14} />
-        Close EMI
+      <Button variant="ghost" size="icon" title="Close EMI" aria-label="Close EMI"
+        onClick={() => setOpen(true)}
+        className="h-8 w-8 rounded-lg text-gray-400 hover:text-orange-600 hover:bg-orange-50">
+        <XCircle size={15} />
       </Button>
       <ConfirmDialog
         open={open} onOpenChange={setOpen}
@@ -94,9 +94,10 @@ export function DeleteEMIButton({ id }: { id: string }) {
   const [isPending, startTransition] = useTransition();
   return (
     <>
-      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500"
-        onClick={() => setOpen(true)}>
-        <Trash2 size={14} />
+      <Button variant="ghost" size="icon" title="Delete EMI" aria-label="Delete EMI"
+        onClick={() => setOpen(true)}
+        className="h-8 w-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50">
+        <Trash2 size={15} />
       </Button>
       <ConfirmDialog
         open={open} onOpenChange={setOpen}
