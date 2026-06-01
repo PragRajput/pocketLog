@@ -63,20 +63,22 @@ export default async function ExpensesPage({ searchParams }: Props) {
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div
                       className="h-9 w-9 rounded-lg flex-shrink-0 flex items-center justify-center text-white font-semibold text-sm"
-                      style={{ backgroundColor: e.fund.color }}
+                      style={{ backgroundColor: e.fund?.color ?? "#94a3b8" }}
                     >
-                      {e.fund.name[0].toUpperCase()}
+                      {e.fund ? e.fund.name[0].toUpperCase() : "?"}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium text-gray-800 truncate">{e.description}</p>
-                        <Badge
-                          variant="secondary"
-                          className="text-[10px] py-0 px-1.5 flex-shrink-0"
-                          style={{ backgroundColor: e.fund.color + "18", color: e.fund.color }}
-                        >
-                          {e.fund.name}
-                        </Badge>
+                        {e.fund && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] py-0 px-1.5 flex-shrink-0"
+                            style={{ backgroundColor: e.fund.color + "18", color: e.fund.color }}
+                          >
+                            {e.fund.name}
+                          </Badge>
+                        )}
                         {e.tag && (
                           <span
                             className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium text-white flex-shrink-0"

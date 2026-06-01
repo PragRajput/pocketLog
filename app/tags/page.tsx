@@ -56,25 +56,24 @@ export default async function TagsPage() {
                   </div>
 
                   {/* Stats */}
-                  <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-sm">
-                    <div>
-                      <p className="text-xs text-gray-400">Total paid</p>
-                      <p className="font-bold text-gray-900 text-base">{formatCurrency(t.total)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-400">Payments</p>
-                      <p className="font-semibold text-gray-700">{t.count}</p>
-                    </div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+                    <span>
+                      <span className="text-xs text-gray-400">Total paid </span>
+                      <span className="font-bold text-gray-900">{formatCurrency(t.total)}</span>
+                    </span>
+                    <span className="text-gray-200">·</span>
+                    <span>
+                      <span className="text-xs text-gray-400">Payments </span>
+                      <span className="font-semibold text-gray-700">{t.count}</span>
+                    </span>
                     {t.firstDate && (
-                      <div>
-                        <p className="text-xs text-gray-400">Period</p>
-                        <p className="text-gray-600 text-xs">
+                      <>
+                        <span className="text-gray-200">·</span>
+                        <span className="text-xs text-gray-500">
                           {formatDate(t.firstDate)}
-                          {t.firstDate !== t.lastDate && t.lastDate
-                            ? ` → ${formatDate(t.lastDate)}`
-                            : ""}
-                        </p>
-                      </div>
+                          {t.firstDate !== t.lastDate && t.lastDate ? ` → ${formatDate(t.lastDate)}` : ""}
+                        </span>
+                      </>
                     )}
                   </div>
                 </div>

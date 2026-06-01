@@ -21,7 +21,7 @@ interface Category { id: string; name: string; color: string }
 interface TagType { id: string; name: string; color: string }
 interface Expense {
   id: string; amount: number; description: string; date: Date;
-  fundId: string; categoryId: string | null; tagId: string | null; note: string | null;
+  fundId: string | null; categoryId: string | null; tagId: string | null; note: string | null;
 }
 
 interface ExpenseFormProps {
@@ -42,7 +42,7 @@ export function ExpenseForm({ funds, categories, tags: initialTags, expense, def
   const [date, setDate] = useState(
     expense ? format(new Date(expense.date), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")
   );
-  const [fundId, setFundId] = useState(expense?.fundId ?? defaultFundId ?? funds[0]?.id ?? "");
+  const [fundId, setFundId] = useState(expense?.fundId ?? defaultFundId ?? "");
   const [categoryId, setCategoryId] = useState(expense?.categoryId ?? "");
   const [tagId, setTagId] = useState(expense?.tagId ?? "");
   const [note, setNote] = useState(expense?.note ?? "");
@@ -66,14 +66,14 @@ export function ExpenseForm({ funds, categories, tags: initialTags, expense, def
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!amount || !description || !fundId) return;
+    if (!amount || !description) return;
 
     startTransition(async () => {
       const data = {
         amount: parseFloat(amount),
         description,
         date: new Date(date),
-        fundId,
+        fundId: fundId && fundId !== "none" ? fundId : undefined,
         categoryId: categoryId && categoryId !== "none" ? categoryId : undefined,
         tagId: tagId && tagId !== "none" ? tagId : undefined,
         note: note || undefined,
@@ -87,7 +87,9 @@ export function ExpenseForm({ funds, categories, tags: initialTags, expense, def
         setAmount("");
         setDescription("");
         setNote("");
+        setFundId("");
         setTagId("");
+        setCategoryId("");
         setDate(format(new Date(), "yyyy-MM-dd"));
       }
       setOpen(false);
@@ -151,11 +153,12 @@ export function ExpenseForm({ funds, categories, tags: initialTags, expense, def
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Fund</Label>
-              <Select value={fundId} onValueChange={setFundId} required>
+              <Select value={fundId || undefined} onValueChange={setFundId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select fund" />
+                  <SelectValue placeholder="Optional" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">No fund</SelectItem>
                   {funds.map((f) => (
                     <SelectItem key={f.id} value={f.id}>
                       <span className="flex items-center gap-2">

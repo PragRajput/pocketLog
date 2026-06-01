@@ -39,14 +39,41 @@ export const FUND_ICONS = [
 ];
 
 export const CATEGORY_DEFAULTS = [
-  { name: "Food & Dining", color: "#f97316", icon: "utensils" },
-  { name: "Transportation", color: "#0ea5e9", icon: "car" },
-  { name: "Shopping", color: "#ec4899", icon: "shopping-bag" },
-  { name: "Entertainment", color: "#8b5cf6", icon: "tv" },
-  { name: "Healthcare", color: "#ef4444", icon: "heart" },
+  { name: "Groceries", color: "#22c55e", icon: "shopping-cart" },
+  { name: "Dining Out", color: "#f97316", icon: "utensils" },
+  { name: "Petrol / Fuel", color: "#f59e0b", icon: "fuel" },
+  { name: "Auto / Cab", color: "#0ea5e9", icon: "car" },
+  { name: "Electricity Bill", color: "#eab308", icon: "zap" },
+  { name: "Mobile / Internet", color: "#8b5cf6", icon: "smartphone" },
+  { name: "Medical", color: "#ef4444", icon: "heart" },
   { name: "Education", color: "#6366f1", icon: "graduation-cap" },
-  { name: "Housing", color: "#22c55e", icon: "home" },
-  { name: "Utilities", color: "#eab308", icon: "zap" },
-  { name: "Travel", color: "#14b8a6", icon: "map-pin" },
+  { name: "Clothing", color: "#ec4899", icon: "shopping-bag" },
+  { name: "Entertainment", color: "#a855f7", icon: "tv" },
+  { name: "Rent", color: "#14b8a6", icon: "home" },
+  { name: "Household", color: "#84cc16", icon: "wrench" },
+  { name: "Money Transfer", color: "#06b6d4", icon: "send" },
+  { name: "Investment", color: "#10b981", icon: "trending-up" },
   { name: "Other", color: "#64748b", icon: "tag" },
 ];
+
+// ─── EMI helpers ──────────────────────────────────────────
+
+export function getInstallmentNo(emi: { startMonth: number; startYear: number }, month: number, year: number) {
+  return (year - emi.startYear) * 12 + (month - emi.startMonth) + 1;
+}
+
+export function isEMIActiveForMonth(
+  emi: { startMonth: number; startYear: number; tenure: number; status: string; closedAt: Date | null },
+  month: number,
+  year: number
+) {
+  const no = getInstallmentNo(emi, month, year);
+  if (no < 1 || no > emi.tenure) return false;
+  if (emi.status === "closed" && emi.closedAt) {
+    const closed = new Date(emi.closedAt);
+    if (year > closed.getFullYear() || (year === closed.getFullYear() && month > closed.getMonth() + 1)) {
+      return false;
+    }
+  }
+  return true;
+}

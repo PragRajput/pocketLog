@@ -9,7 +9,7 @@ interface Expense {
   description: string;
   date: Date;
   note?: string | null;
-  fund: { name: string };
+  fund: { name: string } | null;
   category?: { name: string } | null;
 }
 
@@ -26,7 +26,7 @@ export function ExportButton({ expenses, month }: Props) {
         format(new Date(e.date), "dd/MM/yyyy"),
         e.description,
         e.amount.toFixed(2),
-        e.fund.name,
+        e.fund?.name ?? "",
         e.category?.name ?? "",
         e.note ?? "",
       ]),

@@ -9,6 +9,8 @@ import {
   BarChart3,
   IndianRupee,
   Tag,
+  CreditCard,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,8 +18,10 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/expenses", label: "Expenses", icon: Receipt },
   { href: "/funds", label: "Funds", icon: Wallet },
+  { href: "/emis", label: "EMIs", icon: CreditCard },
   { href: "/tags", label: "Tags", icon: Tag },
   { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function Sidebar() {

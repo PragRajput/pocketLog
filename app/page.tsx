@@ -1,21 +1,34 @@
+export const dynamic = 'force-dynamic';
+
 import { getDashboardStats, getFunds, getCategories, getTags } from "@/lib/actions";
+import { getActiveEMIs } from "@/lib/emi-actions";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SpendingChart } from "@/components/dashboard/spending-chart";
 import { FundBreakdown } from "@/components/dashboard/fund-breakdown";
 import { ExpenseForm } from "@/components/expenses/expense-form";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { TrendingUp, Wallet, ReceiptText, Target } from "lucide-react";
+import { MarkPaidButton } from "@/components/emis/emi-actions-buttons";
+import { formatCurrency, formatDate, getInstallmentNo, isEMIActiveForMonth } from "@/lib/utils";
+import { TrendingUp, Wallet, ReceiptText, Target, CreditCard, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
 export default async function DashboardPage() {
-  const [stats, funds, categories, tags] = await Promise.all([
+  const [stats, funds, categories, tags, activeEMIs] = await Promise.all([
     getDashboardStats(),
     getFunds(),
     getCategories(),
     getTags(),
+    getActiveEMIs(),
   ]);
+
+  const now = new Date();
+  const curMonth = now.getMonth() + 1;
+  const curYear = now.getFullYear();
+
+  const dueEMIs = activeEMIs.filter(e => isEMIActiveForMonth(e, curMonth, curYear));
+  const unpaidEMIs = dueEMIs.filter(e => !e.payments.some(p => p.month === curMonth && p.year === curYear));
+  const paidEMIs = dueEMIs.filter(e => e.payments.some(p => p.month === curMonth && p.year === curYear));
 
   const totalBudget = funds.reduce((s, f) => s + (f.budget ?? 0), 0);
   const budgetUsed = totalBudget > 0
@@ -174,22 +187,26 @@ export default async function DashboardPage() {
                   <div className="flex items-center gap-3">
                     <div
                       className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-                      style={{ backgroundColor: e.fund.color }}
+                      style={{ backgroundColor: e.fund?.color ?? "#94a3b8" }}
                     >
-                      {e.fund.name[0].toUpperCase()}
+                      {e.fund ? e.fund.name[0].toUpperCase() : "?"}
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-800 leading-tight">{e.description}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="text-xs text-gray-400">{formatDate(e.date)}</span>
-                        <span className="text-gray-200">·</span>
-                        <Badge
-                          variant="secondary"
-                          className="py-0 px-1.5 text-[10px]"
-                          style={{ backgroundColor: e.fund.color + "18", color: e.fund.color }}
-                        >
-                          {e.fund.name}
-                        </Badge>
+                        {e.fund && (
+                          <>
+                            <span className="text-gray-200">·</span>
+                            <Badge
+                              variant="secondary"
+                              className="py-0 px-1.5 text-[10px]"
+                              style={{ backgroundColor: e.fund.color + "18", color: e.fund.color }}
+                            >
+                              {e.fund.name}
+                            </Badge>
+                          </>
+                        )}
                         {e.category && (
                           <Badge variant="secondary" className="py-0 px-1.5 text-[10px]">
                             {e.category.name}
@@ -207,6 +224,58 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* EMI widget — only shown if EMIs are due this month */}
+      {dueEMIs.length > 0 && (
+        <Card className="mt-4">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-indigo-500" />
+                <CardTitle className="text-sm">EMIs Due This Month</CardTitle>
+                {unpaidEMIs.length > 0 && (
+                  <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                    {unpaidEMIs.length} pending
+                  </span>
+                )}
+              </div>
+              <Link href="/emis" className="text-xs text-indigo-600 hover:underline">View all</Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {dueEMIs.map(emi => {
+                const installmentNo = getInstallmentNo(emi, curMonth, curYear);
+                const paid = emi.payments.some(p => p.month === curMonth && p.year === curYear);
+                return (
+                  <div key={emi.id} className={`flex items-center justify-between p-3 rounded-lg ${paid ? "bg-emerald-50" : "bg-amber-50"}`}>
+                    <div className="flex items-center gap-3">
+                      {paid
+                        ? <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />
+                        : <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                      }
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{emi.name}</p>
+                        <p className="text-xs text-gray-500">
+                          Installment {installmentNo} of {emi.tenure}
+                          {emi.lender ? ` · ${emi.lender}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-bold text-gray-900">{formatCurrency(emi.amount)}</span>
+                      <MarkPaidButton
+                        emiId={emi.id} month={curMonth} year={curYear}
+                        installmentNo={installmentNo} paid={paid}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
