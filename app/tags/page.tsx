@@ -5,7 +5,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { TagIcon, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { DeleteTagButton } from "@/components/tags/delete-tag-button";
-import { TagForm } from "@/components/tags/tag-form";
+import { TagForm, EditTagButton } from "@/components/tags/tag-form";
 
 export default async function TagsPage() {
   const tags = await getTags();
@@ -41,54 +41,51 @@ export default async function TagsPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
         {tagsWithStats.map((t) => (
-          <Card key={t.id} className="hover:shadow-md transition-shadow group">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  {/* Color pill */}
-                  <div
-                    className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-white shadow-sm"
-                    style={{ backgroundColor: t.color }}
-                  >
-                    # {t.name}
-                  </div>
-
-                  {/* Stats */}
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
-                    <span>
-                      <span className="text-xs text-gray-400">Total paid </span>
-                      <span className="font-bold text-gray-900">{formatCurrency(t.total)}</span>
-                    </span>
-                    <span className="text-gray-200">·</span>
-                    <span>
-                      <span className="text-xs text-gray-400">Payments </span>
-                      <span className="font-semibold text-gray-700">{t.count}</span>
-                    </span>
-                    {t.firstDate && (
-                      <>
-                        <span className="text-gray-200">·</span>
-                        <span className="text-xs text-gray-500">
-                          {formatDate(t.firstDate)}
-                          {t.firstDate !== t.lastDate && t.lastDate ? ` → ${formatDate(t.lastDate)}` : ""}
-                        </span>
-                      </>
-                    )}
-                  </div>
+          <Card key={t.id} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4 sm:p-5">
+              {/* Header: color pill + actions */}
+              <div className="flex items-start justify-between gap-2">
+                <div
+                  className="inline-flex min-w-0 items-center rounded-full px-3 py-1.5 text-sm font-semibold text-white shadow-sm"
+                  style={{ backgroundColor: t.color }}
+                >
+                  <span className="truncate"># {t.name}</span>
                 </div>
-
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Link
-                    href={`/expenses?tagId=${t.id}`}
-                    className="text-xs text-sky-600 hover:text-sky-700 flex items-center gap-1 font-medium opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    View payments
-                    <ArrowRight size={12} />
-                  </Link>
+                <div className="flex items-center gap-0.5 flex-shrink-0">
+                  <EditTagButton tag={t} />
                   <DeleteTagButton id={t.id} />
                 </div>
               </div>
+
+              {/* Stats */}
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <div>
+                  <p className="text-[11px] text-gray-400">Total paid</p>
+                  <p className="text-sm font-bold text-gray-900 truncate">{formatCurrency(t.total)}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-gray-400">Payments</p>
+                  <p className="text-sm font-semibold text-gray-700">{t.count}</p>
+                </div>
+                {t.firstDate && (
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-gray-400">Period</p>
+                    <p className="text-xs font-medium text-gray-600 truncate">
+                      {formatDate(t.firstDate)}
+                      {t.firstDate !== t.lastDate && t.lastDate ? ` → ${formatDate(t.lastDate)}` : ""}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Note */}
+              {t.note && (
+                <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2">
+                  <p className="text-xs text-gray-600 whitespace-pre-wrap">{t.note}</p>
+                </div>
+              )}
 
               {/* Payment mini-timeline */}
               {t.count > 0 && (
@@ -118,6 +115,17 @@ export default async function TagsPage() {
                   </div>
                 </div>
               )}
+
+              {/* View payments — bottom-right on laptop/tablet, left on mobile */}
+              <div className="mt-3 flex sm:justify-end">
+                <Link
+                  href={`/expenses?tagId=${t.id}`}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
+                >
+                  View payments
+                  <ArrowRight size={12} />
+                </Link>
+              </div>
             </CardContent>
           </Card>
         ))}

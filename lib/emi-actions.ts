@@ -95,6 +95,7 @@ export async function updateEMI(id: string, data: {
   gstOnFee?: number | null; otherCharges?: number | null; otherChargesNote?: string;
   note?: string;
 }) {
+  const userId = await requireUserId();
   const sets: string[] = ['"updatedAt" = NOW()'];
   const params: unknown[] = [];
   const add = (col: string, val: unknown) => { params.push(val); sets.push(`"${col}" = $${params.length}`); };
@@ -109,8 +110,11 @@ export async function updateEMI(id: string, data: {
   if (data.otherCharges !== undefined) add("otherCharges", data.otherCharges);
   if (data.otherChargesNote !== undefined) add("otherChargesNote", data.otherChargesNote);
   if (data.note !== undefined) add("note", data.note);
-  params.push(id);
-  const rows = await sql(`UPDATE "EMI" SET ${sets.join(", ")} WHERE id = $${params.length} RETURNING *`, params);
+  params.push(id); params.push(userId);
+  const rows = await sql(
+    `UPDATE "EMI" SET ${sets.join(", ")} WHERE id = $${params.length - 1} AND "userId" = $${params.length} RETURNING *`,
+    params,
+  );
   revalidatePath("/"); revalidatePath("/emis");
   return rows[0];
 }
@@ -122,16 +126,24 @@ export async function deleteEMI(id: string) {
 }
 
 export async function markEMIPaid(emiId: string, month: number, year: number, installmentNo: number) {
+  const userId = await requireUserId();
+  // INSERT only proceeds if the EMI belongs to the caller (ownership guard).
   await sql`
     INSERT INTO "EMIPayment" (id, "emiId", month, year, "installmentNo", "paidAt", "createdAt")
-    VALUES (${crypto.randomUUID()}, ${emiId}, ${month}, ${year}, ${installmentNo}, NOW(), NOW())
+    SELECT ${crypto.randomUUID()}, ${emiId}, ${month}, ${year}, ${installmentNo}, NOW(), NOW()
+    WHERE EXISTS (SELECT 1 FROM "EMI" WHERE id = ${emiId} AND "userId" = ${userId})
     ON CONFLICT ("emiId", month, year) DO UPDATE SET "paidAt" = NOW()
   `;
   revalidatePath("/"); revalidatePath("/emis");
 }
 
 export async function unmarkEMIPaid(emiId: string, month: number, year: number) {
-  await sql`DELETE FROM "EMIPayment" WHERE "emiId" = ${emiId} AND month = ${month} AND year = ${year}`;
+  const userId = await requireUserId();
+  await sql`
+    DELETE FROM "EMIPayment"
+    WHERE "emiId" = ${emiId} AND month = ${month} AND year = ${year}
+      AND EXISTS (SELECT 1 FROM "EMI" WHERE id = ${emiId} AND "userId" = ${userId})
+  `;
   revalidatePath("/"); revalidatePath("/emis");
 }
 

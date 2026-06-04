@@ -46,8 +46,10 @@ const SelectContent = React.forwardRef<
     >
       <SelectPrimitive.Viewport
         className={cn(
-          "p-1",
-          position === "popper" && "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
+          // Cap height and scroll when there are many items (e.g. categories);
+          // shrinks on short screens so it never overflows the viewport.
+          "p-1 overflow-y-auto max-h-[min(18rem,var(--radix-select-content-available-height,18rem))]",
+          position === "popper" && "w-full min-w-[var(--radix-select-trigger-width)]"
         )}
       >
         {children}

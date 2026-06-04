@@ -16,3 +16,35 @@ body {
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* ── Dialog animations ──────────────────────────────────────
+   Radix toggles [data-state="open"|"closed"] on the overlay and
+   content. Mobile = bottom sheet (slide up), desktop = centered
+   modal (fade + zoom). */
+@keyframes dialog-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dialog-overlay-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes dialog-sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes dialog-sheet-out { from { transform: translateY(0); } to { transform: translateY(100%); } }
+
+.dialog-overlay[data-state="open"] { animation: dialog-overlay-in 0.2s ease; }
+.dialog-overlay[data-state="closed"] { animation: dialog-overlay-out 0.18s ease forwards; }
+
+.dialog-content[data-state="open"] { animation: dialog-sheet-in 0.28s cubic-bezier(0.32, 0.72, 0, 1); }
+.dialog-content[data-state="closed"] { animation: dialog-sheet-out 0.2s ease-in forwards; }
+
+@media (min-width: 640px) {
+  @keyframes dialog-modal-in {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+  @keyframes dialog-modal-out {
+    from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    to { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+  }
+  .dialog-content[data-state="open"] { animation: dialog-modal-in 0.18s ease; }
+  .dialog-content[data-state="closed"] { animation: dialog-modal-out 0.15s ease forwards; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog-overlay, .dialog-content { animation: none !important; }
+}

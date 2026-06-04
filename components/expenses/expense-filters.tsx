@@ -30,33 +30,61 @@ export function ExpenseFilters({ categories, tags }: Props) {
     [router, searchParams]
   );
 
+  const updateMany = useCallback(
+    (entries: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(entries)) {
+        if (value) params.set(key, value);
+        else params.delete(key);
+      }
+      startTransition(() => router.push(`/expenses?${params.toString()}`));
+    },
+    [router, searchParams]
+  );
+
   const hasFilters = searchParams.size > 0;
   const advancedCount = ["tagId", "categoryId", "from", "to"].filter(
     (k) => searchParams.has(k)
   ).length;
 
+  const tagId = searchParams.get("tagId") ?? "all";
+  const tagMode = searchParams.get("tagMode") === "ne" ? "ne" : "eq";
+
   const filterSelects = (
     <>
       {tags.length > 0 && (
-        <Select
-          value={searchParams.get("tagId") ?? "all"}
-          onValueChange={(v) => update("tagId", v === "all" ? null : v)}
-        >
-          <SelectTrigger className="w-full md:w-44">
-            <SelectValue placeholder="All Tags" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Tags</SelectItem>
-            {tags.map((t) => (
-              <SelectItem key={t.id} value={t.id}>
-                <span className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: t.color }} />
-                  #{t.name}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2 w-full md:w-auto col-span-2">
+          <Select value={tagMode} onValueChange={(v) => update("tagMode", v === "ne" ? "ne" : null)}>
+            <SelectTrigger className="w-[88px] flex-shrink-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="eq">Tag is</SelectItem>
+              <SelectItem value="ne">is not</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={tagId}
+            onValueChange={(v) =>
+              updateMany(v === "all" ? { tagId: null, tagMode: null } : { tagId: v })
+            }
+          >
+            <SelectTrigger className="flex-1 md:w-44">
+              <SelectValue placeholder="All Tags" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tags</SelectItem>
+              {tags.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: t.color }} />
+                    #{t.name}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       )}
 
       <Select

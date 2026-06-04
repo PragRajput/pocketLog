@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import {
   LayoutDashboard, Receipt, BarChart3,
-  IndianRupee, Tag, CreditCard, Settings, Menu, X,
+  IndianRupee, Tag, CreditCard, Settings, LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "./user-menu";
@@ -19,20 +19,16 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-// Bottom tab bar shows only the primary routes
-const tabItems = navItems.filter((n) =>
-  ["/", "/expenses", "/emis", "/tags", "/reports"].includes(n.href)
-);
+// Bottom tab bar shows the 5 primary routes, with Dashboard in the center slot.
+const tabOrder = ["/emis", "/expenses", "/", "/tags", "/reports"];
+const tabItems = tabOrder.map((href) => navItems.find((n) => n.href === href)!);
 
 interface SidebarProps {
   user?: { name?: string | null; email?: string | null };
 }
 
 export function Sidebar({ user }: SidebarProps) {
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const pathname = usePathname();
-
-  useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -95,14 +91,6 @@ export function Sidebar({ user }: SidebarProps) {
 
       {/* ── Mobile top bar ──────────────────────────────── */}
       <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 z-30">
-        <button
-          onClick={() => setDrawerOpen(true)}
-          className="p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-          aria-label="Open menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600">
             <IndianRupee className="h-4 w-4 text-white" />
@@ -110,71 +98,29 @@ export function Sidebar({ user }: SidebarProps) {
           <span className="font-bold text-gray-900 text-sm">Pocketlog</span>
         </div>
 
-        {/* Spacer to center logo */}
-        <div className="w-9" />
+        <div className="flex items-center gap-1">
+          <Link
+            href="/settings"
+            aria-label="Settings"
+            className={cn(
+              "p-2 rounded-lg transition-colors",
+              isActive("/settings") ? "text-indigo-600 bg-indigo-50" : "text-gray-500 hover:bg-gray-100"
+            )}
+          >
+            <Settings className="h-5 w-5" />
+          </Link>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            aria-label="Sign out"
+            className="p-2 rounded-lg text-gray-500 hover:text-red-500 hover:bg-gray-100 transition-colors"
+          >
+            <LogOut className="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
-      {/* ── Mobile drawer ───────────────────────────────── */}
-      {drawerOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
-          <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setDrawerOpen(false)}
-          />
-          <aside className="relative z-50 w-72 h-full bg-white flex flex-col shadow-2xl">
-            {/* Drawer header */}
-            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600">
-                  <IndianRupee className="h-4.5 w-4.5 text-white" />
-                </div>
-                <div>
-                  <p className="font-bold text-gray-900 text-sm leading-tight">Pocketlog</p>
-                  <p className="text-xs text-gray-400">Personal Finance</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setDrawerOpen(false)}
-                className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Drawer nav */}
-            <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-              {navItems.map(({ href, label, icon: Icon }) => {
-                const active = isActive(href);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all",
-                      active
-                        ? "bg-indigo-50 text-indigo-700"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    )}
-                  >
-                    <Icon
-                      className={cn(active ? "text-indigo-600" : "text-gray-400")}
-                      size={20}
-                    />
-                    {label}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            <div className="px-5 py-4 border-t border-gray-100">
-              <p className="text-xs text-gray-400">Track every rupee.</p>
-            </div>
-          </aside>
-        </div>
-      )}
-
       {/* ── Mobile bottom tab bar (5 primary routes) ────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30 flex safe-area-inset-bottom">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-100 z-30 flex pb-[env(safe-area-inset-bottom)]">
         {tabItems.map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           return (
@@ -182,7 +128,7 @@ export function Sidebar({ user }: SidebarProps) {
               key={href}
               href={href}
               className={cn(
-                "flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-colors min-w-0",
+                "flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-colors min-w-0 active:bg-gray-50",
                 active ? "text-indigo-600" : "text-gray-400"
               )}
             >

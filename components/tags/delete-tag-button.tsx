@@ -24,7 +24,7 @@ export function DeleteTagButton({ id }: { id: string }) {
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="h-8 w-8 text-gray-400 hover:text-red-500 transition-colors"
         onClick={() => setOpen(true)}
       >
         <Trash2 size={14} />

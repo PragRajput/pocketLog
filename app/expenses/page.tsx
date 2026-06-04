@@ -11,6 +11,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 interface SearchParams {
   categoryId?: string;
   tagId?: string;
+  tagMode?: string;
   search?: string;
   from?: string;
   to?: string;
@@ -24,6 +25,7 @@ export default async function ExpensesPage({ searchParams }: Props) {
     getExpenses({
       categoryId: sp.categoryId,
       tagId: sp.tagId,
+      tagMode: sp.tagMode === "ne" ? "ne" : "eq",
       search: sp.search,
       from: sp.from ? new Date(sp.from) : undefined,
       to: sp.to ? new Date(sp.to) : undefined,

@@ -4,24 +4,35 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger,
 } from "@/components/ui/dialog";
-import { createTag } from "@/lib/actions";
+import { createTag, updateTag } from "@/lib/actions";
 import { toast } from "@/lib/toast";
-import { Plus } from "lucide-react";
-import { FUND_COLORS } from "@/lib/utils";
+import { Plus, Pencil } from "lucide-react";
 
 const TAG_COLORS = [
   "#0ea5e9", "#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
   "#f97316", "#eab308", "#22c55e", "#14b8a6", "#64748b",
 ];
 
-export function TagForm() {
+interface TagData {
+  id: string; name: string; color: string; note: string | null;
+}
+
+interface TagFormProps {
+  tag?: TagData;
+  trigger?: React.ReactNode;
+}
+
+export function TagForm({ tag, trigger }: TagFormProps) {
+  const isEdit = !!tag;
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [name, setName] = useState("");
-  const [color, setColor] = useState(TAG_COLORS[0]);
+  const [name, setName] = useState(tag?.name ?? "");
+  const [color, setColor] = useState(tag?.color ?? TAG_COLORS[0]);
+  const [note, setNote] = useState(tag?.note ?? "");
   const [error, setError] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
@@ -31,10 +42,16 @@ export function TagForm() {
 
     startTransition(async () => {
       try {
-        await createTag({ name: name.trim(), color });
-        toast({ title: "Tag created", description: name.trim(), variant: "success" });
-        setName("");
-        setColor(TAG_COLORS[0]);
+        if (isEdit) {
+          await updateTag(tag.id, { name: name.trim(), color, note: note.trim() || null });
+          toast({ title: "Tag updated", description: name.trim(), variant: "success" });
+        } else {
+          await createTag({ name: name.trim(), color, note: note.trim() || undefined });
+          toast({ title: "Tag created", description: name.trim(), variant: "success" });
+          setName("");
+          setColor(TAG_COLORS[0]);
+          setNote("");
+        }
         setOpen(false);
       } catch {
         setError("A tag with this name already exists.");
@@ -45,16 +62,18 @@ export function TagForm() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus size={16} />
-          New Tag
-        </Button>
+        {trigger ?? (
+          <Button>
+            <Plus size={16} />
+            New Tag
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Create New Tag</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Tag" : "Create New Tag"}</DialogTitle>
           <DialogDescription className="sr-only">
-            Name your tag and pick a color to group related expenses.
+            Name your tag, pick a color, and optionally add a note.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
@@ -82,7 +101,7 @@ export function TagForm() {
                   key={c}
                   type="button"
                   onClick={() => setColor(c)}
-                  className="h-7 w-7 rounded-full transition-transform hover:scale-110"
+                  className="h-8 w-8 rounded-full transition-transform hover:scale-110"
                   style={{
                     backgroundColor: c,
                     outline: color === c ? `3px solid ${c}` : "none",
@@ -103,16 +122,40 @@ export function TagForm() {
             )}
           </div>
 
+          <div className="space-y-1.5">
+            <Label htmlFor="tagnote">Note (optional)</Label>
+            <Textarea
+              id="tagnote"
+              placeholder="e.g. Total budget ₹15,000 · paid in 3 installments"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+            />
+          </div>
+
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isPending} style={{ backgroundColor: color }}>
-              {isPending ? "Creating..." : "Create Tag"}
+              {isPending ? "Saving..." : isEdit ? "Save Changes" : "Create Tag"}
             </Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function EditTagButton({ tag }: { tag: TagData }) {
+  return (
+    <TagForm
+      tag={tag}
+      trigger={
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-indigo-600">
+          <Pencil size={14} />
+        </Button>
+      }
+    />
   );
 }

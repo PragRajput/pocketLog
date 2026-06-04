@@ -7,7 +7,7 @@ import { requireUserId } from "./auth-helpers";
 // ─── Types ────────────────────────────────────────────────
 
 export type Category = { id: string; name: string; color: string; icon: string };
-export type Tag = { id: string; name: string; color: string; createdAt: Date };
+export type Tag = { id: string; name: string; color: string; note: string | null; createdAt: Date };
 export type Expense = {
   id: string; amount: number; description: string; date: Date;
   categoryId: string | null; tagId: string | null;
@@ -54,15 +54,36 @@ export async function getTags(): Promise<TagWithExpenses[]> {
   ` as unknown as Promise<TagWithExpenses[]>;
 }
 
-export async function createTag(data: { name: string; color?: string }): Promise<Tag> {
+export async function createTag(data: { name: string; color?: string; note?: string }): Promise<Tag> {
   const userId = await requireUserId();
   const existing = await sql`SELECT * FROM "Tag" WHERE name = ${data.name} AND "userId" = ${userId} LIMIT 1`;
   if (existing[0]) return existing[0] as Tag;
   const rows = await sql`
-    INSERT INTO "Tag" (id, name, color, "userId", "createdAt")
-    VALUES (${crypto.randomUUID()}, ${data.name}, ${data.color ?? "#0ea5e9"}, ${userId}, NOW())
+    INSERT INTO "Tag" (id, name, color, note, "userId", "createdAt")
+    VALUES (${crypto.randomUUID()}, ${data.name}, ${data.color ?? "#0ea5e9"}, ${data.note ?? null}, ${userId}, NOW())
     RETURNING *
   `;
+  revalidatePath("/expenses"); revalidatePath("/tags");
+  return rows[0] as Tag;
+}
+
+export async function updateTag(id: string, data: { name?: string; color?: string; note?: string | null }): Promise<Tag> {
+  const userId = await requireUserId();
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  const add = (col: string, val: unknown) => { params.push(val); sets.push(`"${col}" = $${params.length}`); };
+  if (data.name !== undefined) add("name", data.name);
+  if (data.color !== undefined) add("color", data.color);
+  if (data.note !== undefined) add("note", data.note);
+  if (sets.length === 0) {
+    const rows = await sql`SELECT * FROM "Tag" WHERE id = ${id} AND "userId" = ${userId} LIMIT 1`;
+    return rows[0] as Tag;
+  }
+  params.push(id); params.push(userId);
+  const rows = await sql(
+    `UPDATE "Tag" SET ${sets.join(", ")} WHERE id = $${params.length - 1} AND "userId" = $${params.length} RETURNING *`,
+    params,
+  );
   revalidatePath("/expenses"); revalidatePath("/tags");
   return rows[0] as Tag;
 }
@@ -76,7 +97,7 @@ export async function deleteTag(id: string) {
 // ─── Expenses ─────────────────────────────────────────────
 
 export async function getExpenses(filters?: {
-  categoryId?: string; tagId?: string;
+  categoryId?: string; tagId?: string; tagMode?: "eq" | "ne";
   search?: string; from?: Date; to?: Date;
 }): Promise<ExpenseWithRelations[]> {
   const userId = await requireUserId();
@@ -85,7 +106,14 @@ export async function getExpenses(filters?: {
   const p = (v: unknown) => { params.push(v); return `$${params.length}`; };
 
   if (filters?.categoryId) conds.push(`e."categoryId" = ${p(filters.categoryId)}`);
-  if (filters?.tagId) conds.push(`e."tagId" = ${p(filters.tagId)}`);
+  if (filters?.tagId) {
+    // "ne" keeps untagged expenses and any other tag; only the chosen tag is excluded.
+    conds.push(
+      filters.tagMode === "ne"
+        ? `e."tagId" IS DISTINCT FROM ${p(filters.tagId)}`
+        : `e."tagId" = ${p(filters.tagId)}`,
+    );
+  }
   if (filters?.search) {
     const pat = p(`%${filters.search}%`);
     conds.push(`(e.description ILIKE ${pat} OR e.note ILIKE ${pat} OR EXISTS (SELECT 1 FROM "Tag" t WHERE t.id = e."tagId" AND t.name ILIKE ${pat}))`);

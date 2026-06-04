@@ -33,23 +33,29 @@ export default async function EMIsPage() {
 
       {/* Summary */}
       {active.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-          <Card>
-            <CardContent className="p-5">
-              <p className="text-xs text-gray-500 mb-1">Active EMIs</p>
-              <p className="text-2xl font-bold text-gray-900">{active.length}</p>
+        <div className="flex gap-2 sm:gap-3 mb-6">
+          <Card className="flex-1 min-w-0">
+            <CardContent className="p-3 sm:p-5">
+              <p className="text-[11px] sm:text-xs text-gray-500 mb-1 truncate">Active EMIs</p>
+              <p className="text-base sm:text-2xl font-bold text-gray-900">{active.length}</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-5">
-              <p className="text-xs text-gray-500 mb-1">Total This Month</p>
-              <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalMonthlyOutflow)}</p>
+          <Card className="flex-1 min-w-0">
+            <CardContent className="p-3 sm:p-5">
+              <p className="text-[11px] sm:text-xs text-gray-500 mb-1 truncate">
+                <span className="sm:hidden">This Month</span>
+                <span className="hidden sm:inline">Total This Month</span>
+              </p>
+              <p className="text-base sm:text-2xl font-bold text-gray-900 truncate">{formatCurrency(totalMonthlyOutflow)}</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-5">
-              <p className="text-xs text-gray-500 mb-1">Total Remaining (all EMIs)</p>
-              <p className="text-2xl font-bold text-gray-900">
+          <Card className="flex-1 min-w-0">
+            <CardContent className="p-3 sm:p-5">
+              <p className="text-[11px] sm:text-xs text-gray-500 mb-1 truncate">
+                <span className="sm:hidden">Remaining</span>
+                <span className="hidden sm:inline">Total Remaining (all EMIs)</span>
+              </p>
+              <p className="text-base sm:text-2xl font-bold text-gray-900 truncate">
                 {formatCurrency(active.reduce((s, e) => {
                   const paidCount = e.payments.length;
                   const remaining = Math.max(0, e.tenure - paidCount);
@@ -92,70 +98,115 @@ export default async function EMIsPage() {
               return d.toLocaleString("default", { month: "short", year: "numeric" });
             })();
 
+            const status = thisMonthPaid
+              ? { label: "Paid this month", accent: "#10b981", iconBg: "bg-emerald-50", iconColor: "text-emerald-600", badge: "bg-emerald-50 text-emerald-700" }
+              : isThisMonthDue
+              ? { label: "Due now", accent: "#f59e0b", iconBg: "bg-amber-50", iconColor: "text-amber-600", badge: "bg-amber-50 text-amber-700" }
+              : { label: "Active", accent: "#6366f1", iconBg: "bg-indigo-50", iconColor: "text-indigo-600", badge: "bg-indigo-50 text-indigo-600" };
+
             return (
-              <Card key={emi.id} className={`overflow-hidden ${isThisMonthDue && !thisMonthPaid ? "ring-2 ring-amber-200" : ""}`}>
-                <div className="h-1" style={{ backgroundColor: thisMonthPaid ? "#10b981" : isThisMonthDue ? "#f59e0b" : "#6366f1" }} />
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between flex-wrap gap-3">
-                    {/* Left: info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="font-semibold text-gray-900">{emi.name}</h3>
-                        {emi.lender && <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{emi.lender}</span>}
+              <Card key={emi.id} className={`overflow-hidden transition-shadow hover:shadow-md ${isThisMonthDue && !thisMonthPaid ? "ring-1 ring-amber-200" : ""}`}>
+                <div className="h-1" style={{ backgroundColor: status.accent }} />
+                <CardContent className="p-4 sm:p-5">
+                  {/* Header: avatar + name + status + amount + actions */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${status.iconBg}`}>
+                        <CreditCard className={`h-5 w-5 ${status.iconColor}`} />
                       </div>
-
-                      <div className="flex items-center gap-4 text-sm mb-3 flex-wrap">
-                        <span className="font-bold text-indigo-600 text-lg">{formatCurrency(emi.amount)}<span className="text-xs font-normal text-gray-400">/mo</span></span>
-                        <span className="text-gray-500">{paidCount}/{emi.tenure} paid</span>
-                        <span className="text-gray-500">{remaining} left · ends {endDate}</span>
-                        <span className="font-medium text-gray-700">{formatCurrency(remaining * emi.amount)} remaining</span>
-                      </div>
-
-                      {/* Processing fees row */}
-                      {(emi.processingFee || emi.gstOnFee || emi.otherCharges) && (() => {
-                        const totalFees = (emi.processingFee ?? 0) + (emi.gstOnFee ?? 0) + (emi.otherCharges ?? 0);
-                        const grandTotal = emi.amount * emi.tenure + totalFees;
-                        return (
-                          <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-3 flex flex-wrap gap-x-4 gap-y-1">
-                            {emi.processingFee ? <span className="text-xs text-gray-600">Processing fee <span className="font-semibold">{formatCurrency(emi.processingFee)}</span></span> : null}
-                            {emi.gstOnFee ? <span className="text-xs text-gray-600">GST <span className="font-semibold">{formatCurrency(emi.gstOnFee)}</span></span> : null}
-                            {emi.otherCharges ? <span className="text-xs text-gray-600">{emi.otherChargesNote || "Other"} <span className="font-semibold">{formatCurrency(emi.otherCharges)}</span></span> : null}
-                            <span className="text-xs font-bold text-amber-700 ml-auto">Total fees {formatCurrency(totalFees)} · Grand total {formatCurrency(grandTotal)}</span>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Progress bar */}
-                      <div className="mb-1">
-                        <div className="h-2 w-full rounded-full bg-gray-100 max-w-sm">
-                          <div className="h-2 rounded-full bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-gray-900 truncate">{emi.name}</h3>
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.badge}`}>
+                            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: status.accent }} />
+                            {status.label}
+                          </span>
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">{pct}% complete</p>
+                        <p className="mt-0.5 flex items-baseline gap-1 flex-wrap">
+                          <span className="font-bold text-indigo-600 text-base">{formatCurrency(emi.amount)}</span>
+                          <span className="text-xs text-gray-400">/mo</span>
+                          {emi.lender && <span className="text-xs text-gray-300">·</span>}
+                          {emi.lender && <span className="text-xs text-gray-500 truncate">{emi.lender}</span>}
+                        </p>
                       </div>
                     </div>
-
-                    {/* Right: actions */}
-                    <div className="flex flex-col items-end gap-2">
-                      {isThisMonthDue && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">Month {installmentNo} of {emi.tenure}</span>
-                          <MarkPaidButton
-                            emiId={emi.id} month={curMonth} year={curYear}
-                            installmentNo={installmentNo} paid={thisMonthPaid}
-                          />
-                        </div>
-                      )}
-                      <div className="flex items-center gap-0.5 rounded-xl border border-gray-200 bg-gray-50/60 p-0.5">
-                        <EditEMIButton emi={emi} />
-                        <CloseEMIButton id={emi.id} />
-                        <DeleteEMIButton id={emi.id} />
-                      </div>
+                    <div className="flex items-center gap-0.5 rounded-xl border border-gray-200 bg-gray-50/60 p-0.5 flex-shrink-0">
+                      <EditEMIButton emi={emi} />
+                      <CloseEMIButton id={emi.id} />
+                      <DeleteEMIButton id={emi.id} />
                     </div>
                   </div>
 
+                  {/* Progress */}
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="font-medium text-gray-600">{paidCount} of {emi.tenure} installments paid</span>
+                      <span className="font-semibold text-gray-500">{pct}%</span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: pct >= 100 ? "#10b981" : "#6366f1" }} />
+                    </div>
+                  </div>
+
+                  {/* Key stats */}
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <p className="text-[11px] text-gray-400">Remaining</p>
+                      <p className="text-sm font-semibold text-gray-800">{remaining} mo</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <p className="text-[11px] text-gray-400">Balance left</p>
+                      <p className="text-sm font-semibold text-gray-800 truncate">{formatCurrency(remaining * emi.amount)}</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <p className="text-[11px] text-gray-400">Ends</p>
+                      <p className="text-sm font-semibold text-gray-800">{endDate}</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 px-3 py-2">
+                      <p className="text-[11px] text-gray-400">Total loan</p>
+                      <p className="text-sm font-semibold text-gray-800 truncate">{formatCurrency(emi.amount * emi.tenure)}</p>
+                    </div>
+                  </div>
+
+                  {/* Processing fees row */}
+                  {(emi.processingFee || emi.gstOnFee || emi.otherCharges) && (() => {
+                    const totalFees = (emi.processingFee ?? 0) + (emi.gstOnFee ?? 0) + (emi.otherCharges ?? 0);
+                    const grandTotal = emi.amount * emi.tenure + totalFees;
+                    return (
+                      <div className="mt-3 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 flex flex-wrap gap-x-4 gap-y-1">
+                        {emi.processingFee ? <span className="text-xs text-gray-600">Processing fee <span className="font-semibold">{formatCurrency(emi.processingFee)}</span></span> : null}
+                        {emi.gstOnFee ? <span className="text-xs text-gray-600">GST <span className="font-semibold">{formatCurrency(emi.gstOnFee)}</span></span> : null}
+                        {emi.otherCharges ? <span className="text-xs text-gray-600">{emi.otherChargesNote || "Other"} <span className="font-semibold">{formatCurrency(emi.otherCharges)}</span></span> : null}
+                        <span className="text-xs font-bold text-amber-700 w-full sm:w-auto sm:ml-auto">Total fees {formatCurrency(totalFees)} · Grand total {formatCurrency(grandTotal)}</span>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Mark paid banner — only when due this month */}
+                  {isThisMonthDue && (
+                    <div className={`mt-4 flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 ${thisMonthPaid ? "bg-emerald-50" : "bg-amber-50"}`}>
+                      <span className={`text-xs font-medium ${thisMonthPaid ? "text-emerald-700" : "text-amber-700"}`}>
+                        {thisMonthPaid
+                          ? `Installment ${installmentNo} paid for ${MONTHS[curMonth - 1]}`
+                          : `Installment ${installmentNo} of ${emi.tenure} due this month`}
+                      </span>
+                      <MarkPaidButton
+                        emiId={emi.id} month={curMonth} year={curYear}
+                        installmentNo={installmentNo} paid={thisMonthPaid}
+                      />
+                    </div>
+                  )}
+
                   {/* Payment history strip */}
-                  <div className="mt-4 pt-3 border-t border-gray-50">
-                    <p className="text-xs text-gray-400 mb-2">Payment history</p>
+                  <div className="mt-4 pt-3 border-t border-gray-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs text-gray-400">Payment history</p>
+                      <div className="flex items-center gap-2.5 text-[10px] text-gray-400">
+                        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-emerald-200" />Paid</span>
+                        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-amber-200 ring-1 ring-amber-400" />Now</span>
+                        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-gray-100" />Due</span>
+                      </div>
+                    </div>
                     <div className="flex gap-1 flex-wrap">
                       {Array.from({ length: emi.tenure }, (_, i) => {
                         const m = ((emi.startMonth - 1 + i) % 12) + 1;
