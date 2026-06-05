@@ -1,23 +1,27 @@
 export const dynamic = 'force-dynamic';
 
-import { getDashboardStats, getCategories, getTags } from "@/lib/actions";
+import { getDashboardStats, getCategories, getTags, getPendingPayments, getRecentPayees } from "@/lib/actions";
 import { getActiveEMIs } from "@/lib/emi-actions";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SpendingChart } from "@/components/dashboard/spending-chart";
 import { ExpenseForm } from "@/components/expenses/expense-form";
+import { UpiPayDialog } from "@/components/pay/upi-pay-dialog";
+import { PendingPayments } from "@/components/pay/pending-payments";
 import { MarkPaidButton } from "@/components/emis/emi-actions-buttons";
 import { formatCurrency, formatDate, getInstallmentNo, isEMIActiveForMonth } from "@/lib/utils";
 import { TrendingUp, ReceiptText, Coins, PieChart, CreditCard, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
 export default async function DashboardPage() {
-  const [stats, categories, tags, activeEMIs] = await Promise.all([
+  const [stats, categories, tags, activeEMIs, pending, recentPayees] = await Promise.all([
     getDashboardStats(),
     getCategories(),
     getTags(),
     getActiveEMIs(),
+    getPendingPayments(),
+    getRecentPayees(),
   ]);
 
   const now = new Date();
@@ -70,8 +74,15 @@ export default async function DashboardPage() {
       <Header
         title="Dashboard"
         description={`Overview for ${new Date().toLocaleString("default", { month: "long", year: "numeric" })}`}
-        action={<ExpenseForm categories={categories} tags={tags} />}
+        action={
+          <div className="flex items-center gap-2">
+            <UpiPayDialog categories={categories} tags={tags} recentPayees={recentPayees} />
+            <ExpenseForm categories={categories} tags={tags} />
+          </div>
+        }
       />
+
+      <PendingPayments payments={pending} />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

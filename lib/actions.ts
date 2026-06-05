@@ -11,12 +11,22 @@ export type Tag = { id: string; name: string; color: string; note: string | null
 export type Expense = {
   id: string; amount: number; description: string; date: Date;
   categoryId: string | null; tagId: string | null;
-  note: string | null; paymentMethod: string | null; createdAt: Date; updatedAt: Date;
+  note: string | null; paymentMethod: string | null;
+  payeeVpa: string | null; payeeName: string | null;
+  createdAt: Date; updatedAt: Date;
 };
 export type ExpenseWithRelations = Expense & {
   category: Category | null; tag: Tag | null;
 };
 export type TagWithExpenses = Tag & { expenses: Pick<Expense, "id" | "amount" | "date">[] };
+
+export type PendingPayment = {
+  id: string; amount: number; description: string;
+  payeeVpa: string | null; payeeName: string | null;
+  categoryId: string | null; tagId: string | null;
+  note: string | null; paymentMethod: string | null; createdAt: Date;
+};
+export type RecentPayee = { vpa: string; name: string | null };
 
 // ─── Categories ──────────────────────────────────────────
 
@@ -134,13 +144,15 @@ export async function getExpenses(filters?: {
 export async function createExpense(data: {
   amount: number; description: string; date: Date;
   categoryId?: string; tagId?: string; note?: string; paymentMethod?: string;
+  payeeVpa?: string; payeeName?: string;
 }): Promise<Expense> {
   const userId = await requireUserId();
   const rows = await sql`
-    INSERT INTO "Expense" (id, amount, description, date, "categoryId", "tagId", note, "paymentMethod", "userId", "createdAt", "updatedAt")
+    INSERT INTO "Expense" (id, amount, description, date, "categoryId", "tagId", note, "paymentMethod", "payeeVpa", "payeeName", "userId", "createdAt", "updatedAt")
     VALUES (${crypto.randomUUID()}, ${data.amount}, ${data.description}, ${data.date},
             ${data.categoryId ?? null}, ${data.tagId ?? null},
-            ${data.note ?? null}, ${data.paymentMethod ?? null}, ${userId}, NOW(), NOW())
+            ${data.note ?? null}, ${data.paymentMethod ?? null},
+            ${data.payeeVpa ?? null}, ${data.payeeName ?? null}, ${userId}, NOW(), NOW())
     RETURNING *
   `;
   revalidatePath("/"); revalidatePath("/expenses"); revalidatePath("/reports"); revalidatePath("/tags");
@@ -172,6 +184,70 @@ export async function deleteExpense(id: string) {
   const userId = await requireUserId();
   await sql`DELETE FROM "Expense" WHERE id = ${id} AND "userId" = ${userId}`;
   revalidatePath("/"); revalidatePath("/expenses"); revalidatePath("/reports"); revalidatePath("/tags");
+}
+
+// ─── UPI Pay: pending payments + recent payees ────────────
+
+export async function getPendingPayments(): Promise<PendingPayment[]> {
+  const userId = await requireUserId();
+  return sql`
+    SELECT * FROM "PendingPayment" WHERE "userId" = ${userId} ORDER BY "createdAt" DESC
+  ` as unknown as Promise<PendingPayment[]>;
+}
+
+export async function createPendingPayment(data: {
+  amount: number; description: string;
+  payeeVpa?: string; payeeName?: string;
+  categoryId?: string; tagId?: string; note?: string; paymentMethod?: string;
+}): Promise<PendingPayment> {
+  const userId = await requireUserId();
+  const rows = await sql`
+    INSERT INTO "PendingPayment" (id, amount, description, "payeeVpa", "payeeName", "categoryId", "tagId", note, "paymentMethod", "userId", "createdAt")
+    VALUES (${crypto.randomUUID()}, ${data.amount}, ${data.description},
+            ${data.payeeVpa ?? null}, ${data.payeeName ?? null},
+            ${data.categoryId ?? null}, ${data.tagId ?? null},
+            ${data.note ?? null}, ${data.paymentMethod ?? null}, ${userId}, NOW())
+    RETURNING *
+  `;
+  revalidatePath("/"); revalidatePath("/expenses");
+  return rows[0] as PendingPayment;
+}
+
+// Confirm a pending payment → turn it into a real expense and remove the pending row.
+export async function confirmPendingPayment(id: string): Promise<void> {
+  const userId = await requireUserId();
+  const rows = await sql`SELECT * FROM "PendingPayment" WHERE id = ${id} AND "userId" = ${userId} LIMIT 1`;
+  const pp = rows[0] as PendingPayment | undefined;
+  if (!pp) return;
+  await sql`
+    INSERT INTO "Expense" (id, amount, description, date, "categoryId", "tagId", note, "paymentMethod", "payeeVpa", "payeeName", "userId", "createdAt", "updatedAt")
+    VALUES (${crypto.randomUUID()}, ${pp.amount}, ${pp.description}, NOW(),
+            ${pp.categoryId ?? null}, ${pp.tagId ?? null},
+            ${pp.note ?? null}, ${pp.paymentMethod ?? null},
+            ${pp.payeeVpa ?? null}, ${pp.payeeName ?? null}, ${userId}, NOW(), NOW())
+  `;
+  await sql`DELETE FROM "PendingPayment" WHERE id = ${id} AND "userId" = ${userId}`;
+  revalidatePath("/"); revalidatePath("/expenses"); revalidatePath("/reports"); revalidatePath("/tags");
+}
+
+export async function deletePendingPayment(id: string): Promise<void> {
+  const userId = await requireUserId();
+  await sql`DELETE FROM "PendingPayment" WHERE id = ${id} AND "userId" = ${userId}`;
+  revalidatePath("/"); revalidatePath("/expenses");
+}
+
+// Distinct payees from confirmed expenses, most-recently-used first.
+export async function getRecentPayees(): Promise<RecentPayee[]> {
+  const userId = await requireUserId();
+  return sql`
+    SELECT "payeeVpa" AS vpa,
+           (array_agg("payeeName" ORDER BY "createdAt" DESC))[1] AS name
+    FROM "Expense"
+    WHERE "userId" = ${userId} AND "payeeVpa" IS NOT NULL AND "payeeVpa" <> ''
+    GROUP BY "payeeVpa"
+    ORDER BY MAX("createdAt") DESC
+    LIMIT 12
+  ` as unknown as Promise<RecentPayee[]>;
 }
 
 // ─── Dashboard stats ──────────────────────────────────────
@@ -249,17 +325,34 @@ export async function getDashboardStats() {
 
 // ─── Seed ─────────────────────────────────────────────────
 
+// Runs from the root layout on every request, so it must be cheap and safe:
+// it skips work once seeded, and never throws (a transient DB outage should
+// degrade gracefully, not 500 the entire app).
+let categoriesSeeded = false;
+
 export async function seedDatabase() {
-  const { CATEGORY_DEFAULTS } = await import("./utils");
-  await Promise.all(
-    CATEGORY_DEFAULTS.map((cat) =>
-      sql`
-        INSERT INTO "Category" (id, name, color, icon)
-        VALUES (${crypto.randomUUID()}, ${cat.name}, ${cat.color}, ${cat.icon})
-        ON CONFLICT (name) DO NOTHING
-      `
-    )
-  );
+  if (categoriesSeeded) return;
+  try {
+    const existing = await sql`SELECT 1 FROM "Category" LIMIT 1`;
+    if (existing.length > 0) {
+      categoriesSeeded = true;
+      return;
+    }
+    const { CATEGORY_DEFAULTS } = await import("./utils");
+    await Promise.all(
+      CATEGORY_DEFAULTS.map((cat) =>
+        sql`
+          INSERT INTO "Category" (id, name, color, icon)
+          VALUES (${crypto.randomUUID()}, ${cat.name}, ${cat.color}, ${cat.icon})
+          ON CONFLICT (name) DO NOTHING
+        `
+      )
+    );
+    categoriesSeeded = true;
+  } catch (err) {
+    // Best-effort: leave categoriesSeeded false so a later request can retry.
+    console.error("seedDatabase skipped (DB unavailable):", err);
+  }
 }
 
 export async function addCategory(data: { name: string; color: string }): Promise<Category> {

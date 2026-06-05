@@ -1,4 +1,4 @@
-import { getExpenses, getCategories, getTags } from "@/lib/actions";
+import { getExpenses, getCategories, getTags, getPendingPayments, getRecentPayees } from "@/lib/actions";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +6,8 @@ import { ExpenseForm } from "@/components/expenses/expense-form";
 import { EditExpenseButton } from "@/components/expenses/expense-form";
 import { DeleteExpenseButton } from "@/components/expenses/delete-expense-button";
 import { ExpenseFilters } from "@/components/expenses/expense-filters";
+import { UpiPayDialog } from "@/components/pay/upi-pay-dialog";
+import { PendingPayments } from "@/components/pay/pending-payments";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 interface SearchParams {
@@ -21,7 +23,7 @@ interface Props { searchParams: Promise<SearchParams> }
 
 export default async function ExpensesPage({ searchParams }: Props) {
   const sp = await searchParams;
-  const [expenses, categories, tags] = await Promise.all([
+  const [expenses, categories, tags, pending, recentPayees] = await Promise.all([
     getExpenses({
       categoryId: sp.categoryId,
       tagId: sp.tagId,
@@ -32,6 +34,8 @@ export default async function ExpensesPage({ searchParams }: Props) {
     }),
     getCategories(),
     getTags(),
+    getPendingPayments(),
+    getRecentPayees(),
   ]);
 
   const total = expenses.reduce((s, e) => s + e.amount, 0);
@@ -41,8 +45,15 @@ export default async function ExpensesPage({ searchParams }: Props) {
       <Header
         title="Expenses"
         description={`${expenses.length} expense${expenses.length !== 1 ? "s" : ""} · ${formatCurrency(total)} total`}
-        action={<ExpenseForm categories={categories} tags={tags} />}
+        action={
+          <div className="flex items-center gap-2">
+            <UpiPayDialog categories={categories} tags={tags} recentPayees={recentPayees} />
+            <ExpenseForm categories={categories} tags={tags} />
+          </div>
+        }
       />
+
+      <PendingPayments payments={pending} />
 
       <ExpenseFilters categories={categories} tags={tags} />
 
