@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { SpendingChart } from "@/components/dashboard/spending-chart";
 import { ExpenseForm } from "@/components/expenses/expense-form";
 import { UpiPayDialog } from "@/components/pay/upi-pay-dialog";
+import { ScanPayFab } from "@/components/pay/scan-pay-fab";
 import { PendingPayments } from "@/components/pay/pending-payments";
 import { MarkPaidButton } from "@/components/emis/emi-actions-buttons";
 import { formatCurrency, formatDate, getInstallmentNo, isEMIActiveForMonth } from "@/lib/utils";
@@ -76,11 +77,15 @@ export default async function DashboardPage() {
         description={`Overview for ${new Date().toLocaleString("default", { month: "long", year: "numeric" })}`}
         action={
           <div className="flex items-center gap-2">
-            <UpiPayDialog categories={categories} tags={tags} recentPayees={recentPayees} />
+            <div className="hidden md:block">
+              <UpiPayDialog categories={categories} tags={tags} recentPayees={recentPayees} />
+            </div>
             <ExpenseForm categories={categories} tags={tags} />
           </div>
         }
       />
+
+      <ScanPayFab categories={categories} tags={tags} recentPayees={recentPayees} />
 
       <PendingPayments payments={pending} />
 

@@ -7,6 +7,7 @@ import { EditExpenseButton } from "@/components/expenses/expense-form";
 import { DeleteExpenseButton } from "@/components/expenses/delete-expense-button";
 import { ExpenseFilters } from "@/components/expenses/expense-filters";
 import { UpiPayDialog } from "@/components/pay/upi-pay-dialog";
+import { ScanPayFab } from "@/components/pay/scan-pay-fab";
 import { PendingPayments } from "@/components/pay/pending-payments";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -47,11 +48,15 @@ export default async function ExpensesPage({ searchParams }: Props) {
         description={`${expenses.length} expense${expenses.length !== 1 ? "s" : ""} · ${formatCurrency(total)} total`}
         action={
           <div className="flex items-center gap-2">
-            <UpiPayDialog categories={categories} tags={tags} recentPayees={recentPayees} />
+            <div className="hidden md:block">
+              <UpiPayDialog categories={categories} tags={tags} recentPayees={recentPayees} />
+            </div>
             <ExpenseForm categories={categories} tags={tags} />
           </div>
         }
       />
+
+      <ScanPayFab categories={categories} tags={tags} recentPayees={recentPayees} />
 
       <PendingPayments payments={pending} />
 

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { QrScanner } from "./qr-scanner";
 import { createPendingPayment } from "@/lib/actions";
-import { buildUpiUrl, parseUpiQr, isValidVpa, UPI_APPS, type UpiApp } from "@/lib/upi";
+import { buildUpiUrl, parseUpiQr, isValidVpa } from "@/lib/upi";
 import { toast } from "@/lib/toast";
 import { QrCode, ScanLine, ArrowLeft, Wallet } from "lucide-react";
 
@@ -46,13 +46,11 @@ export function UpiPayDialog({ categories, tags, recentPayees, trigger }: Props)
   const [categoryId, setCategoryId] = useState("");
   const [tagId, setTagId] = useState("");
   const [note, setNote] = useState("");
-  const [app, setApp] = useState<UpiApp>("any");
 
   function reset() {
     setStep("choose");
     setVpa(""); setPayeeName(""); setManualVpa("");
     setAmount(""); setDescription(""); setCategoryId(""); setTagId(""); setNote("");
-    setApp("any");
   }
 
   function onOpenChange(v: boolean) {
@@ -93,8 +91,6 @@ export function UpiPayDialog({ categories, tags, recentPayees, trigger }: Props)
       toast({ title: "Enter an amount", variant: "error" });
       return;
     }
-    const appLabel = UPI_APPS.find((a) => a.value === app)?.label;
-    const paymentMethod = app === "any" ? "UPI" : `UPI · ${appLabel}`;
     const desc = description.trim() || payeeName || "UPI Payment";
 
     startTransition(async () => {
@@ -107,10 +103,12 @@ export function UpiPayDialog({ categories, tags, recentPayees, trigger }: Props)
         categoryId: categoryId && categoryId !== "none" ? categoryId : undefined,
         tagId: tagId && tagId !== "none" ? tagId : undefined,
         note: note || undefined,
-        paymentMethod,
+        paymentMethod: "UPI",
       });
 
-      const url = buildUpiUrl(app, {
+      // Generic UPI intent → the phone shows its own app chooser (GPay, PhonePe,
+      // CRED, Paytm…). App-specific schemes are unreliable, so we don't use them.
+      const url = buildUpiUrl("any", {
         pa: vpa,
         pn: payeeName || undefined,
         am: amt,
@@ -215,25 +213,12 @@ export function UpiPayDialog({ categories, tags, recentPayees, trigger }: Props)
               {payeeName && <p className="text-xs text-gray-500">{vpa}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="pay-amount">Amount (₹)</Label>
-                <Input
-                  id="pay-amount" type="number" inputMode="decimal" placeholder="0" min="0" step="0.01"
-                  value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Pay using</Label>
-                <Select value={app} onValueChange={(v) => setApp(v as UpiApp)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {UPI_APPS.map((a) => (
-                      <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pay-amount">Amount (₹)</Label>
+              <Input
+                id="pay-amount" type="number" inputMode="decimal" placeholder="0" min="0" step="0.01"
+                value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus required
+              />
             </div>
 
             <div className="space-y-1.5">
